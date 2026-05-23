@@ -1,0 +1,39 @@
+{# SPDX-FileCopyrightText: 2026 project-agi contributors #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  Escalate prompt — hand off cleanly to a human tier-2 agent.
+
+  Context variables:
+    customer_question: string
+    conversation_summary: string  — what the agent has tried so far
+    customer:    { id, name, plan, status }
+    handoff_queue: string         — destination queue id
+    sentiment:   { score, label } — score in [-1, 1]
+#}
+The customer asked:
+
+  "{{ customer_question }}"
+
+What we have tried so far:
+{{ conversation_summary }}
+
+Customer:
+  id:     {{ customer.id }}
+  plan:   {{ customer.plan }}
+  status: {{ customer.status }}
+Sentiment: {{ sentiment.label }} ({{ sentiment.score }})
+
+You have decided to escalate. Do the following, in order:
+
+1. Call `ticket.create` with:
+     - priority chosen by sentiment (high if sentiment.score < -0.3, else
+       normal)
+     - tags: ["escalation", "{{ customer.plan }}"]
+     - summary: <= 240 chars, written for a human agent, not the customer
+2. Call `ticket.escalate` routing to `{{ handoff_queue }}`.
+3. Reply to the customer in <= 3 sentences:
+     - Acknowledge the issue in their words.
+     - State that a specialist has been engaged.
+     - Give them the ticket id and an expected first-response window.
+
+Do not promise a resolution outcome. Do not invent SLAs.

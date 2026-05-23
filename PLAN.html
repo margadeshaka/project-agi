@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>project-agi — open-source plan (review · v3 · post-debate)</title>
+<style>
+  :root{
+    --bg:#0b0d10;
+    --panel:#11151a;
+    --panel-2:#161b22;
+    --ink:#e6edf3;
+    --ink-muted:#9aa6b2;
+    --line:#2a313a;
+    --accent:#4f9cf9;
+    --good:#3ecf8e;
+    --warn:#f5b14d;
+    --bad:#ff6b6b;
+    --code-bg:#0f1318;
+    --tag:#1f2731;
+    --band1:#1e3a5f;
+    --band2:#3d2b1f;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f7f8fa;
+      --panel:#ffffff;
+      --panel-2:#f1f3f6;
+      --ink:#0f1419;
+      --ink-muted:#5b6573;
+      --line:#e3e6eb;
+      --accent:#1f6feb;
+      --good:#1a7f37;
+      --warn:#bf8700;
+      --bad:#cf222e;
+      --code-bg:#f4f6f8;
+      --tag:#eef1f5;
+      --band1:#e5f0fa;
+      --band2:#faf0e5;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .page{max-width:1100px;margin:0 auto;padding:32px 24px 96px}
+  header.hero{padding:28px 28px 24px;background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);border:1px solid var(--line);border-radius:14px;margin-bottom:28px}
+  header.hero h1{margin:0 0 6px;font-size:28px;letter-spacing:-0.01em}
+  header.hero p.tag{margin:0 0 14px;color:var(--ink-muted);font-size:14px}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .pill{display:inline-flex;align-items:center;padding:4px 10px;font-size:12px;border-radius:999px;background:var(--tag);border:1px solid var(--line);color:var(--ink-muted)}
+  .pill.status-draft{background:rgba(245,177,77,.12);color:var(--warn);border-color:rgba(245,177,77,.35)}
+  .pill.license{background:rgba(62,207,142,.12);color:var(--good);border-color:rgba(62,207,142,.35)}
+  .pill.rev{background:rgba(79,156,249,.12);color:var(--accent);border-color:rgba(79,156,249,.35)}
+  nav.toc{position:sticky;top:0;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);margin:-8px 0 24px;display:flex;flex-wrap:wrap;gap:6px;z-index:5}
+  nav.toc a{font-size:13px;padding:5px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink-muted)}
+  nav.toc a:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:0 0 20px}
+  section h2{margin:0 0 6px;font-size:20px;letter-spacing:-0.01em}
+  section h2 .num{color:var(--ink-muted);font-weight:500;margin-right:8px}
+  section h3{margin:22px 0 8px;font-size:15px;color:var(--ink);text-transform:uppercase;letter-spacing:0.06em}
+  section p,section li{color:var(--ink)}
+  section p.lede{color:var(--ink-muted);margin-top:0}
+  ul,ol{padding-left:22px;margin:8px 0}
+  li{margin:4px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--ink-muted);font-weight:600;background:var(--panel-2);font-size:12px;text-transform:uppercase;letter-spacing:0.06em}
+  tr:last-child td{border-bottom:none}
+  code{background:var(--code-bg);border:1px solid var(--line);padding:1px 6px;border-radius:5px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre{background:var(--code-bg);border:1px solid var(--line);padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px;line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre.diagram{font-size:12.5px;line-height:1.4}
+  pre.band1{background:var(--band1);border-color:rgba(79,156,249,.3)}
+  pre.band2{background:var(--band2);border-color:rgba(245,177,77,.3)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:12px}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h4{margin:0 0 4px;font-size:14px}
+  .card p{margin:0;color:var(--ink-muted);font-size:13.5px}
+  .phase{border-left:3px solid var(--accent);padding:8px 14px;margin:10px 0;background:var(--panel-2);border-radius:0 8px 8px 0}
+  .phase h4{margin:0 0 4px;font-size:14.5px}
+  .phase .when{color:var(--ink-muted);font-size:12px;margin-bottom:6px}
+  .phase ul{margin:6px 0 0}
+  .decision{display:flex;gap:12px;padding:10px 12px;background:var(--panel-2);border-left:3px solid var(--warn);border-radius:0 8px 8px 0;margin:8px 0}
+  .decision .n{font-weight:600;color:var(--warn);min-width:24px}
+  .decision .q{flex:1}
+  .resolved{display:flex;gap:12px;padding:10px 12px;background:var(--panel-2);border-left:3px solid var(--good);border-radius:0 8px 8px 0;margin:8px 0}
+  .resolved .n{font-weight:600;color:var(--good);min-width:24px}
+  .resolved .q{flex:1}
+  .risk{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:10px 12px;background:var(--panel-2);border-radius:8px;margin:8px 0;border:1px solid var(--line)}
+  .risk .head{font-weight:600;font-size:13.5px}
+  .risk .body{color:var(--ink-muted);font-size:13.5px}
+  .badge{display:inline-block;padding:2px 8px;font-size:11px;border-radius:6px;background:var(--tag);color:var(--ink-muted);margin-left:6px;vertical-align:middle}
+  .badge.bad{background:rgba(255,107,107,.12);color:var(--bad)}
+  .badge.good{background:rgba(62,207,142,.12);color:var(--good)}
+  .badge.warn{background:rgba(245,177,77,.12);color:var(--warn)}
+  .badge.band1{background:rgba(79,156,249,.18);color:var(--accent)}
+  .badge.band2{background:rgba(245,177,77,.18);color:var(--warn)}
+  .quote{border-left:3px solid var(--accent);padding:6px 14px;color:var(--ink-muted);margin:10px 0;font-style:italic}
+  .callout{background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:8px;padding:14px 18px;margin:14px 0}
+  .callout h4{margin:0 0 4px;font-size:14.5px;color:var(--good)}
+  .callout p{margin:0;color:var(--ink-muted);font-size:13.5px}
+  .footer{color:var(--ink-muted);font-size:12.5px;text-align:center;margin-top:32px}
+  @media (max-width:720px){
+    .risk{grid-template-columns:1fr}
+    section{padding:18px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>project-agi <span class="badge">working title</span></h1>
+  <p class="tag">An open-source, self-hosted, configuration-driven Agent Intelligence stack — <strong>vertical-agnostic</strong>. SDK is the product; reference runtime + UI + chart are the supported distribution.</p>
+  <p style="margin:0;color:var(--ink-muted);max-width:82ch">Works for any vertical with an OpenAPI surface and a need for agent tooling — telco, banking, retail, healthcare, energy, fleet, education, public sector, and beyond. v3 incorporates the resolutions from <code>DEBATE.md</code>: two-band architecture, pack-group-per-pod with claims-based dispatch, YAML-only prompts with a documented hotfix lane, Keycloak as the reference identity adapter, LangGraph + Pydantic-AI as blessed-but-optional orchestrators, plain async as default.</p>
+  <div class="pill-row">
+    <span class="pill status-draft">Status · planning draft</span>
+    <span class="pill rev">Revision · v3 · 2026-05-22 (post-debate)</span>
+    <span class="pill license">License intent · Apache-2.0</span>
+    <span class="pill">Owner · hitesh.gupta@comviva.com</span>
+    <span class="pill">Folder · office/project-agi/</span>
+  </div>
+</header>
+
+<div class="callout">
+  <h4>v3 changes vs v2</h4>
+  <p>Architecture redrawn as <strong>two visual bands</strong> (Product / Reference Distribution). Deployment unit is <strong>pack-group-per-pod</strong> with claims-based <code>X-Pack</code> dispatch. Prompts stay YAML-in-pack, with a <strong>15-minute hotfix lane</strong>. Orchestration: blessed-but-optional <strong>LangGraph + Pydantic-AI</strong> adapters; plain <code>async def</code> is the default. Open decisions reduced from 8 to 3.</p>
+</div>
+
+<nav class="toc">
+  <a href="#tldr">TL;DR</a>
+  <a href="#sources">Sources</a>
+  <a href="#arch">Architecture</a>
+  <a href="#roles">Roles</a>
+  <a href="#mcp">Auto-MCP</a>
+  <a href="#orch">Orchestration</a>
+  <a href="#verticals">Verticals</a>
+  <a href="#tenancy">Tenancy</a>
+  <a href="#prompts">Prompts + hotfix</a>
+  <a href="#layout">Repo layout</a>
+  <a href="#config">Config model</a>
+  <a href="#exclusions">Exclusions</a>
+  <a href="#phases">Phases</a>
+  <a href="#resolved">Resolved</a>
+  <a href="#decisions">Open decisions</a>
+  <a href="#risks">Risks</a>
+  <a href="#dod">Definition of done</a>
+</nav>
+
+<section id="tldr">
+  <h2><span class="num">§ 0</span>TL;DR</h2>
+  <p class="lede">SDK is the product. Reference runtime + UI + chart are the supported distribution. Multi-tenant via YAML packs with claims-based dispatch. Open-source under Apache-2.0.</p>
+  <div class="grid">
+    <div class="card">
+      <h4>pip install agi-sdk</h4>
+      <p>Library in your process. <code>@use_case</code>, role-keyed models, auto-instrumented traces. Plain async by default; LangGraph / Pydantic-AI adapters optional.</p>
+    </div>
+    <div class="card">
+      <h4>agi-core + agi-mcpfyer</h4>
+      <p>Shared services pod + first-class OpenAPI→MCP generator. Auto-builds a runnable MCP server from any OpenAPI spec.</p>
+    </div>
+    <div class="card">
+      <h4>agi-runtime + agi-ui + agi-chart</h4>
+      <p>Reference distribution: FastAPI runtime, Next.js admin console, Helm chart with proven multi-tenant topology. What Comviva field teams ship.</p>
+    </div>
+    <div class="card">
+      <h4>packs/&lt;tenant&gt;/</h4>
+      <p>Theme, model roles, tool allow-list, prompts, KB seeds — declarative YAML per tenant. 15-min hotfix lane via fast-merge branch + container rebuild.</p>
+    </div>
+  </div>
+  <div class="quote">SDK is the heart. Distribution is supported. Same repo, distinct altitudes. Three decisions still pending: repo location, final name, eval-harness wrapper depth.</div>
+</section>
+
+<section id="sources">
+  <h2><span class="num">§ 1</span>The two sources we're merging</h2>
+  <table>
+    <thead><tr><th>Repo</th><th>Branch</th><th>What's there</th><th>Posture</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>bluemarble-ai-framework</code></td>
+        <td><code>v0</code></td>
+        <td>
+          <strong>SDK skeleton</strong> (<code>sdk/bm_ai/</code>) — decorators, bootstrap, CLI.<br>
+          <strong>Intelligence Core skeleton</strong> (<code>core/bm_core/</code>) — registry, hub proxy, <em>mcpfyer</em> (auto-MCP), HTTP routes, settings.<br>
+          <strong>Full design doc set</strong> (<code>docs/00..08</code>) — Why, Overview, SDK, Core, Observability, Design/Runtime, Deployment, Open Decisions.
+        </td>
+        <td>Library-first. "<em>Not a platform.</em>" OpenLLMetry auto-instrumentation. LiteLLM library mode. MCP-only tools. Roles-not-providers.</td>
+      </tr>
+      <tr>
+        <td><code>bm-ai-platform</code></td>
+        <td><code>develop</code></td>
+        <td>
+          <strong>FastAPI MCP server</strong> (<code>src/bm_mcp/</code>), <strong>Next.js 16 UI</strong> (<code>src/ui/</code>), <strong>Helm chart</strong>, Keycloak local stack, MongoDB seed data.
+        </td>
+        <td>Production runtime. Multi-protocol. Internal Nexus libs (<code>bm-ai-auth</code>, <code>bm-ai-logging</code>, <code>bm-ai-mongodb</code>) gate install.</td>
+      </tr>
+      <tr>
+        <td><code>care-intelligence</code></td>
+        <td><code>develop</code></td>
+        <td>
+          Three-layer (<code>platform/</code> / <code>domains/</code> / <code>demo/</code>) solution module. Brand-packs (BlueMarble, BT, KPN, Verizon-Connect) prove multi-tenant config-driven pattern in production.
+        </td>
+        <td>Reference consumer. Validates pack idea + isolation gate + AI-Trail. Retrofitted onto agi-sdk in Phase 6.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="arch">
+  <h2><span class="num">§ 2</span>Architecture — two bands <span class="badge band1">Product</span> <span class="badge band2">Reference Distribution</span></h2>
+  <p class="lede">The SDK is the product. The reference distribution is what Comviva field teams ship. Same repo, distinct visual altitude, separate release cadence.</p>
+
+<pre class="diagram band1">
+┌─ Band 1 · Product (the library) ──────────────────────────────────────┐
+│                                                                        │
+│  agi-sdk          Python library — the actual product                  │
+│    sdk.models · sdk.mcp · sdk.rag · sdk.prompts · sdk.config           │
+│    sdk.serve · sdk.trail · sdk.orchestrators.{langgraph, pydantic_ai} │
+│    Traceloop.init() at boot → OpenLLMetry auto-instrument              │
+│                                                                        │
+│  agi-core         Shared services (optional)                           │
+│    Tool registry · shared vector indexes · hub proxy                   │
+│                                                                        │
+│  agi-mcpfyer      OpenAPI → MCP generator (first-class repo)           │
+│    Versioned tool bundles · side-effect flags · build-time             │
+│                                                                        │
+│  agi-packs        Pack spec + reference packs                          │
+│    blank · telco-demo · fleet-demo                                     │
+│                                                                        │
+└────────────────────────┬───────────────────────────────────────────────┘
+                         │ depended on by (one direction)
+                         ▼
+┌─ Band 2 · Reference Distribution (what Comviva field teams ship) ─────┐
+│                                                                        │
+│  agi-runtime      FastAPI + MCP server                                 │
+│    Header-dispatched per pack (X-Pack) · claims-validated              │
+│    Pack-group-per-pod default · single-pack hardening mode             │
+│                                                                        │
+│  agi-ui           Next.js admin console (see ADMIN_CONSOLE.md)         │
+│    Pack switcher · AI-Trail viewer · tool inspector · KB browser       │
+│                                                                        │
+│  agi-auth         Keycloak reference adapter (first-class)             │
+│    Generic OIDC interface · static-token + dev-noop                    │
+│    Three-role RBAC: AGI_ADMIN / DEVELOPER / VIEWER                     │
+│                                                                        │
+│  agi-chart        Production Helm chart                                │
+│    BASE_PATH subdir routing · ConfigMap-mounted packs                  │
+│    OTel collector wired · CI green against kind                        │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+
+Cross-cutting (per deployment):
+  Langfuse (self-hosted, OTLP ingest) ← default telemetry sink
+  AI-Trail (Mongo/Postgres)           ← audit-grade sink wired off OTel
+</pre>
+
+  <h3>agi-sdk primitives</h3>
+  <table>
+    <thead><tr><th>Primitive</th><th>Gives the author</th><th>Underlying tech</th></tr></thead>
+    <tbody>
+      <tr><td><code>sdk.models</code></td><td>Role-keyed config resolution → <code>ModelBinding</code></td><td>Pydantic + LiteLLM as blessed runner</td></tr>
+      <tr><td><code>sdk.mcp</code></td><td>MCP tool clients with auth + tracing</td><td>Official MCP Python SDK</td></tr>
+      <tr><td><code>sdk.rag</code></td><td>Vector search with pluggable backends</td><td>Qdrant default; Mongo Atlas Search / pgvector / Weaviate adapters</td></tr>
+      <tr><td><code>sdk.prompts</code></td><td>Versioned, localizable prompt loader</td><td>YAML in pack; baked into container</td></tr>
+      <tr><td><code>sdk.config</code></td><td>Typed, layered, validated operator config</td><td>Pydantic + layered loader</td></tr>
+      <tr><td><code>sdk.serve</code></td><td>Expose use case as HTTP + MCP server</td><td>FastAPI + MCP Python SDK</td></tr>
+      <tr><td><code>sdk.trail</code></td><td>Audit-grade sink (not telemetry API)</td><td>OTel collector → durable schema overlay (Mongo/Postgres)</td></tr>
+      <tr><td><code>sdk.orchestrators</code></td><td>Optional adapters for state-machine orchestrators</td><td><code>langgraph</code> + <code>pydantic_ai</code> · ~150 LOC each · plain async still default</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What a use case looks like</h3>
+<pre>import litellm
+from agi_sdk import use_case, serve
+
+@use_case("bill_explainer", version="0.3.0")
+class BillExplainer:
+    def __init__(self, sdk):
+        self.sdk       = sdk
+        self.reasoning = sdk.models.binding("reasoning")
+        self.billing   = sdk.mcp.tool("bluemarble.billing.adjust_charge")
+
+    async def handle(self, request, ctx):                # plain async — the default
+        prompt   = self.sdk.prompts.get("explain_bill").render(...)
+        response = await litellm.acompletion(
+            messages=[{"role": "user", "content": prompt}],
+            **self.reasoning.kwargs(),
+        )
+        return response
+
+if __name__ == "__main__":
+    serve(BillExplainer, http=True, mcp=True)</pre>
+</section>
+
+<section id="roles">
+  <h2><span class="num">§ 3</span>Roles, not providers <span class="badge good">single biggest decoupling</span></h2>
+  <p>Use case code never names a provider. It asks for a role. Operators bind roles → concrete models in their own config. Lint enforces: <code>import openai</code> / <code>import anthropic</code> / <code>import boto3</code> requires an explicit waiver comment.</p>
+<pre>self.reasoning = sdk.models.binding("reasoning")   # &#10003;
+self.fast      = sdk.models.binding("fast")        # &#10003;
+self.claude    = sdk.models.binding("claude")      # &#10003; (arbitrary string)</pre>
+<pre># operator.yaml
+models:
+  reasoning:
+    model_id: bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0
+    region: eu-west-1
+    default_params:
+      max_tokens: 4096
+      temperature: 0.3
+  fast:
+    model_id: bedrock/anthropic.claude-3-5-haiku-20241022-v1:0
+    region: eu-west-1</pre>
+</section>
+
+<section id="mcp">
+  <h2><span class="num">§ 4</span>The auto-MCP hub <span class="badge band1">agi-mcpfyer · first-class</span></h2>
+  <p>Generalised from the v0 framework's <code>mcpfyer</code>. Points at any OpenAPI spec → emits a runnable MCP server. TMF is one example, not a dependency. Build-time generator — does not live in core runtime.</p>
+<pre>tool:
+  name: billing.adjust_charge
+  domain: billing
+  source_api: BillingManagement_v4
+  source_operation: POST /billManagement/v4/billingAccount/{id}/adjustments
+  side_effecting: true
+  rate_limit_class: write_high
+  description: |
+    Apply a one-time adjustment (credit or debit) to a billing account.
+  input_schema:  { ... from OpenAPI ... }
+  output_schema: { ... from OpenAPI ... }
+  dry_run_supported: true</pre>
+</section>
+
+<section id="orch">
+  <h2><span class="num">§ 5</span>Orchestration — built-in + blessed-but-optional <span class="badge good">v2 · native built</span></h2>
+  <p class="lede">Plain <code>async def</code> is the default. A built-in <code>native</code> orchestrator lives in-tree. Two adapters bless one external path each.</p>
+
+  <table>
+    <thead><tr><th>Choice</th><th>When to pick it</th><th>License / cost</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Plain <code>async def</code> + Pydantic state</strong></td><td>Default. No framework gravity. Single-turn agents, request-scoped flows, fast prototypes.</td><td>n/a · zero</td></tr>
+      <tr><td><strong><code>sdk.orchestrators.native</code></strong> <span class="badge good">NEW</span></td><td>Multi-step tool loops, HITL <code>pause</code>/<code>resume</code>, checkpointing, streaming — without LC types or a heavyweight framework.</td><td>Apache-2.0 · in-tree · ~625 LOC</td></tr>
+      <tr><td><strong><code>sdk.orchestrators.langgraph</code></strong></td><td>Full graph state-machine, subgraphs, the LangChain ecosystem.</td><td>MIT (lib). Elastic-2.0 only at LangGraph Platform line, which we do not adopt.</td></tr>
+      <tr><td><strong><code>sdk.orchestrators.pydantic_ai</code></strong></td><td>Type-first agents, FastAPI-style ergonomics, Pydantic-native state without LangChain message types.</td><td>MIT</td></tr>
+    </tbody>
+  </table>
+
+  <p>External adapters stay thin (~150 LOC each):</p>
+  <ul>
+    <li>Set OpenLLMetry baggage (<code>bm.pack</code>, <code>bm.use_case</code>, <code>bm.tenant_id</code>) on every span.</li>
+    <li>Resolve MCP tools from the pack's allow-list.</li>
+    <li>Do <em>not</em> wrap orchestration. Use-case authors talk to LangGraph or Pydantic-AI directly.</li>
+  </ul>
+
+  <p>The <code>native</code> orchestrator is owned in-tree and provides the same surface (<code>set_run_baggage</code>, <code>resolve_tools</code>) plus a real implementation: <code>Run</code>, <code>Orchestrator.step()</code>, <code>run_until_done()</code>, <code>pause</code>/<code>resume</code>, pluggable <code>CheckpointStore</code> (Memory, FileJsonl, Mongo/Postgres stubs), and a streaming surface.</p>
+
+  <h3>Why three options now (not two)</h3>
+  <p>v1 of the research said "don't build" — LangGraph + Pydantic-AI compose cleanly enough. v2 (this revision) overrode that: building hedges <strong>watch-condition W-01</strong> (LangGraph commercial-moat tightening) without requiring a port, gives users an Apache-2.0/no-LC-types path, and the real LOC came in at ~625 — manageable. Plain async stays the default. Care-intelligence still retrofits onto the <code>langgraph</code> adapter (no port — it already uses LangGraph in prod).</p>
+
+  <h3>Watch conditions (when this flips)</h3>
+  <ul>
+    <li><strong>LangChain Inc. tightens the commercial moat.</strong> If checkpointing/HITL move behind LangGraph Platform's Elastic-licensed runtime, demote LangGraph to "supported," promote Pydantic-AI or Strands Agents to blessed.</li>
+    <li><strong>Use-case set narrows to durable workflows.</strong> If ≥80% of packs become long-running with retries+HITL, evaluate Temporal / Inngest / Hatchet outside the LLM-framework class. Plain async stays at LLM call sites; durability gets externalised.</li>
+  </ul>
+  <p>Full research with 10-option survey, build-vs-adopt analysis, the v2 override, and per-vertical examples lives in <code>ORCHESTRATOR_RESEARCH.html</code>.</p>
+</section>
+
+<section id="verticals">
+  <h2><span class="num">§ 5.5</span>Verticals — example use cases <span class="badge good">vertical-agnostic</span></h2>
+  <p class="lede">The reference packs ship <code>telco-demo</code> + <code>fleet-demo</code> only as demonstrators. The framework itself is industry-neutral. The same SDK + pack + orchestrator model has been validated across these shapes:</p>
+
+  <table>
+    <thead><tr><th>Vertical</th><th>Example use case</th><th>Orchestrator pick</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Telco / BSS</strong></td><td>Bill explainer · eSIM activation · refund agent · tier-2 escalation</td><td>Plain async / LangGraph</td></tr>
+      <tr><td><strong>Banking &amp; fintech</strong></td><td>Loan triage · transaction-dispute resolver · KYC pre-check</td><td>Pydantic-AI</td></tr>
+      <tr><td><strong>Retail &amp; e-commerce</strong></td><td>Returns assistant · order-status agent · refund flow</td><td>Plain async</td></tr>
+      <tr><td><strong>Healthcare</strong></td><td>Patient pre-triage · claim-form assistant</td><td>Pydantic-AI</td></tr>
+      <tr><td><strong>Energy &amp; utilities</strong></td><td>Meter-read explainer · outage explainer · tariff comparison</td><td>Plain async</td></tr>
+      <tr><td><strong>Insurance</strong></td><td>Claim resolver with retries + human approval</td><td>LangGraph</td></tr>
+      <tr><td><strong>Fleet &amp; logistics</strong></td><td>Delivery-exception triage · route-incident explainer</td><td>Plain async</td></tr>
+      <tr><td><strong>Education</strong></td><td>Tutor session · student-onboarding flow</td><td>Pydantic-AI</td></tr>
+      <tr><td><strong>Public sector</strong></td><td>Form-fill helper · eligibility explainer</td><td>Plain async</td></tr>
+    </tbody>
+  </table>
+
+  <p>The pattern: choose by <strong>use-case shape</strong>, never by vertical. Same shape → same orchestrator across industries. Adding a new vertical is dropping a folder under <code>packs/</code> — zero changes to <code>agi-sdk</code>, <code>agi-runtime</code>, or anything else.</p>
+</section>
+
+<section id="tenancy">
+  <h2><span class="num">§ 6</span>Multi-tenancy — pack-group-per-pod with claims-based dispatch</h2>
+  <p>The deployment unit is <strong>one runtime container per tenant</strong>, hosting that tenant's packs, dispatched by <code>X-Pack</code> header. The framework's "one container per use case" rule is doctrinally correct but operationally fatal at telco scale (4 packs × 5 use cases × 2 replicas = 40 pods per customer).</p>
+
+  <h3>Hardening mode</h3>
+  <p>Single-pack-per-pod is supported as a Helm values flag for regulated tenants who buy isolation at the cost of baseline infra. Same chart, one toggle.</p>
+
+  <h3>The leak the Framework Advocate flagged — closed by claims-based dispatch</h3>
+  <ul>
+    <li><code>X-Pack</code> header is <strong>mandatory</strong>; missing → 400. No default-pack fallback.</li>
+    <li><code>X-Pack</code> is validated against the authenticated tenant claim on every request. Mismatch → 401, not 200-with-wrong-data.</li>
+    <li>SDK contains <strong>no</strong> pack-dispatch logic. SDK takes one pack at a time. Header dispatch is purely an <code>agi-runtime</code> concern.</li>
+    <li>Storage queries are scoped on <code>pack_slug</code>. Fuzz test in CI verifies isolation.</li>
+  </ul>
+</section>
+
+<section id="prompts">
+  <h2><span class="num">§ 7</span>Prompts — YAML-in-pack with a 15-minute hotfix lane</h2>
+  <p>Prompts live as YAMLs in the pack (<code>packs/&lt;slug&gt;/prompts/</code>), baked into the runtime container at build, PR-reviewed. There is <strong>no</strong> DB-stored prompt with runtime editing. The admin UI shows prompts read-only.</p>
+
+  <h3>Why not DB-stored, runtime-editable</h3>
+  <p>The regulator-asks-why-did-the-refund-threshold-change-on-March-14 failure is severe. DB-stored runtime-editable prompts make this failure trivially easy to land — Ops hot-edits at 2am, no diff in source control, audit log captures <em>who</em> but not <em>whether anyone reviewed it</em>. YAMLs-in-repo + PR review is the only path that survives a telco audit.</p>
+
+  <h3>The hotfix lane — ships with the product</h3>
+  <ul>
+    <li>Each pack is its own git repo (or a subdir of the customer's pack repo).</li>
+    <li>Convention: <code>pack-hotfix/&lt;ticket-id&gt;</code> branch.</li>
+    <li>Pre-merge automated smoke: KB load + prompt-render + tool-schema validation.</li>
+    <li>Auto-tag on merge → container rebuild + image push → runtime auto-reload on new image tag.</li>
+    <li><strong>Promise: ≤ 15 minutes from PR merge to live.</strong></li>
+  </ul>
+
+  <h3>What stays DB-backed</h3>
+  <p>KB articles still get the version+restore mechanism (<code>VersionType.MINOR</code>) — facts updating is a different failure mode than behaviour changing. Prompts do not.</p>
+</section>
+
+<section id="layout">
+  <h2><span class="num">§ 8</span>Repo layout (target)</h2>
+<pre class="diagram">project-agi/
+├── README.md
+├── LICENSE                          # Apache-2.0
+├── pyproject.toml                   # workspace root (uv)
+│
+├── packages/                        # ── Band 1: Product
+│   ├── agi-sdk/                     # the framework — Python lib
+│   │   └── agi/{models,mcp,rag,prompts,config,serve,trail,orchestrators}
+│   ├── agi-core/                    # shared services — registry, hub proxy
+│   ├── agi-mcpfyer/                 # OpenAPI → MCP generator (first-class)
+│   └── agi-packs/                   # pack spec + reference packs
+│       ├── blank/
+│       ├── telco-demo/
+│       └── fleet-demo/
+│
+├── distribution/                    # ── Band 2: Reference Distribution
+│   ├── agi-runtime/                 # FastAPI + MCP shell, X-Pack dispatch
+│   ├── agi-ui/                      # Next.js admin console
+│   ├── agi-auth/                    # Keycloak reference + generic OIDC
+│   └── agi-chart/                   # Helm chart (deploys against kind in CI)
+│
+├── deploy/
+│   └── docker/                      # docker-compose.yml + Langfuse + Qdrant
+│
+├── docs/                            # design docs (extracted + scrubbed from v0)
+├── examples/
+│   ├── embedded/                    # &lt;20 lines of Python
+│   ├── service/                     # full use-case container
+│   └── multi-tenant/                # two packs, one runtime
+└── .github/workflows/               # CI · publish-pypi · publish-images · helm-publish</pre>
+</section>
+
+<section id="config">
+  <h2><span class="num">§ 9</span>Configuration model</h2>
+  <p>A <strong>pack</strong> is a folder. Loading is a function call. Switching the active pack is a header (<code>X-Pack</code>) — validated against the authenticated tenant claim.</p>
+<pre class="diagram">packs/telco-demo/
+├── pack.yaml          # identity, theme, role bindings, tool allow-list
+├── tools.yaml         # optional pack-private tool declarations
+├── prompts/           # YAML/j2, baked into container, source of truth
+├── kb/                # markdown / JSON KB seeds
+├── scenarios/         # optional demo scenarios (drives e2e)
+└── assets/            # logos, favicons</pre>
+
+<pre>slug: telco-demo
+display_name: Telco Demo
+vertical: telco
+theme:
+  primary: "#0066CC"
+  mode_default: light
+models:
+  reasoning:
+    model_id: openai/gpt-4o
+    default_params: { temperature: 0.3 }
+  fast:
+    model_id: ollama/llama3.2
+tools:
+  allow:
+    - billing.adjust_charge
+    - kb.search
+    - escalate_to_tier2
+  deny: []
+auth:
+  required_scopes: ["agent:chat"]
+  tenant_claim: "tenant_id"     # how X-Pack is validated against the token
+trail:
+  audit_sink: file-jsonl
+observability:
+  langfuse_endpoint: http://langfuse:3000</pre>
+
+  <h3>Config precedence (highest wins)</h3>
+  <ol>
+    <li>Per-request headers (<code>X-Pack</code> — claims-validated, <code>X-LLM-Override</code> — admin only)</li>
+    <li>Env vars (<code>AGI_LLM_DEFAULT</code>, <code>AGI_STORAGE_URL</code>, <code>AGI_AUTH_MODE</code>)</li>
+    <li>Active pack's <code>pack.yaml</code></li>
+    <li>Operator-level <code>operator.yaml</code> (mounted via ConfigMap in k8s)</li>
+    <li>Built-in defaults (SQLite, dev-noop, fake LLM in tests)</li>
+  </ol>
+</section>
+
+<section id="exclusions">
+  <h2><span class="num">§ 10</span>What stays out <span class="badge bad">hard exclusions</span></h2>
+  <table>
+    <thead><tr><th>From</th><th>Excluded</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>bm-ai-platform</td><td><code>bm-ai-auth</code>, <code>bm-ai-logging</code>, <code>bm-ai-mongodb</code></td><td>Internal Nexus libs. Replace with PyPI equivalents.</td></tr>
+      <tr><td>bm-ai-platform</td><td>Bedrock ARNs, role names, region defaults</td><td>Customer config. Lift into env-driven config.</td></tr>
+      <tr><td>bm-ai-platform</td><td>Keycloak realm <code>bm-demo5</code>, hard-coded client IDs</td><td>Demo wiring. Keycloak is the reference; realm comes from operator config.</td></tr>
+      <tr><td>bm-ai-platform</td><td>Custom AI-Trail-as-telemetry API</td><td>OpenLLMetry owns telemetry. AI-Trail is audit-only sink wired off the OTel collector.</td></tr>
+      <tr><td>bm-ai-platform</td><td>Heavy DI / facades / factories</td><td>Swappability comes from interfaces (Protocols, ABCs), not factories.</td></tr>
+      <tr><td>bm-ai-platform</td><td>DB-stored runtime-editable prompts</td><td>Audit failure mode. Prompts are YAML-in-pack. Hotfix lane closes the operator pain.</td></tr>
+      <tr><td>bm-ai-framework v0</td><td><code>bm_</code> namespace, <code>bluemarble</code> identifiers</td><td>Trademark + scope. Rename to <code>agi</code>.</td></tr>
+      <tr><td>bm-ai-framework v0</td><td>TMF as a hard dependency in core</td><td>Generalise to "auto-MCP from any OpenAPI." TMF becomes a reference example.</td></tr>
+      <tr><td>care-intelligence</td><td>Customer seed data (BlueMarble / BT / KPN / Verizon-Connect)</td><td>Ships only as optional example packs.</td></tr>
+      <tr><td>both</td><td>Helm values with Comviva-internal hostnames / Jenkins wiring</td><td>Clean public chart + GitHub Actions.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="phases">
+  <h2><span class="num">§ 11</span>Phased plan</h2>
+
+  <div class="phase">
+    <h4>Phase 0 — Public repo scaffold</h4>
+    <div class="when">Week 1</div>
+    <ul>
+      <li>Decide GitHub org + repo name + final project name.</li>
+      <li>Apache-2.0, CODE_OF_CONDUCT, CONTRIBUTING, SECURITY, issue templates, branch protection.</li>
+      <li>GitHub Actions skeleton (lint, type-check, test, build).</li>
+      <li>Reserve PyPI names (<code>agi-sdk</code>, <code>agi-core</code>, <code>agi-mcpfyer</code>).</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 1 — Port the framework v0 SDK shell <span class="badge band1">Band 1</span></h4>
+    <div class="when">Weeks 2–3 · tag v0.1.0</div>
+    <ul>
+      <li>Lift <code>sdk/bm_ai/</code> into <code>packages/agi-sdk/</code>; rename namespace.</li>
+      <li><code>sdk.models</code> (role-keyed bindings, LiteLLM runner) + <code>sdk.mcp</code> + <code>sdk.prompts</code> + <code>sdk.config</code> + <code>sdk.serve</code>.</li>
+      <li><code>Traceloop.init()</code> bootstrap → OpenLLMetry auto-instrument; <code>SpanProcessor</code> overlays.</li>
+      <li>Pack loader (YAML → <code>Pack</code>), isolation-gate test, packs/blank.</li>
+      <li>Publish to TestPyPI.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 1.5 — Orchestrator adapters <span class="badge band1">Band 1</span> <span class="badge good">NEW in v3</span></h4>
+    <div class="when">Week 3 (parallel) · tag v0.1.5</div>
+    <ul>
+      <li><code>sdk.orchestrators.langgraph</code> — ~150 LOC, sets OpenLLMetry baggage, resolves MCP tools from pack allow-list.</li>
+      <li><code>sdk.orchestrators.pydantic_ai</code> — ~150 LOC, same shape, type-first.</li>
+      <li>Both are optional install extras: <code>pip install agi-sdk[langgraph]</code> / <code>[pydantic-ai]</code>.</li>
+      <li>Plain async stays the default in starter packs and docs.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 2 — Auto-MCP hub (generalised mcpfyer) <span class="badge band1">Band 1</span></h4>
+    <div class="when">Weeks 4–5 · tag v0.2.0</div>
+    <ul>
+      <li>Lift mcpfyer + hub + registry into first-class <code>packages/agi-mcpfyer/</code>.</li>
+      <li>Generalise: works against any OpenAPI. TMF stays as a reference example.</li>
+      <li>Versioned tool bundles; pack-pinned hub version.</li>
+      <li>Side-effect flag, rate-limit class, dry-run mode.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 3 — Reference runtime + Langfuse stack <span class="badge band2">Band 2</span></h4>
+    <div class="when">Weeks 6–7 · tag v0.3.0</div>
+    <ul>
+      <li>FastAPI shell: <code>/chat /tools /kb /trail /mcp</code>.</li>
+      <li><strong>Claims-validated</strong> <code>X-Pack</code> header dispatch.</li>
+      <li>Pack-group-per-pod default; single-pack hardening mode as a values flag.</li>
+      <li><code>docker-compose.yml</code>: agi-runtime, Langfuse v3 (OTLP ingest), Qdrant, optional Ollama.</li>
+      <li>Publish image to GHCR.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 4 — Admin UI <span class="badge band2">Band 2</span></h4>
+    <div class="when">Weeks 8–9 · tag v0.4.0 · see ADMIN_CONSOLE.md</div>
+    <ul>
+      <li>Next.js 14+, Tailwind, shadcn/ui. Theme tokens from active pack.</li>
+      <li>Screens: pack switcher · tool inspector · AI-Trail viewer · KB browser · admin/llm.</li>
+      <li><strong>Prompts shown read-only.</strong> No runtime editing.</li>
+      <li>Day-to-day trace work is still in Langfuse.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 5 — Reference packs + Helm chart <span class="badge band2">Band 2</span></h4>
+    <div class="when">Weeks 10–11 · tag v0.5.0</div>
+    <ul>
+      <li><code>packs/telco-demo</code> + <code>packs/fleet-demo</code> — vendor-neutral.</li>
+      <li>Public Helm chart at <code>distribution/agi-chart/</code> with <code>BASE_PATH</code> subdir routing.</li>
+      <li>CI green against a kind cluster.</li>
+      <li>Pack hotfix CI workflow template ships in <code>.github/workflow-templates/</code>.</li>
+      <li>Docs pass: getting-started, packs, tools, llm-providers, auth, deploy.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4>Phase 6 — Retrofit + v1.0 cut</h4>
+    <div class="when">Weeks 12–14 · tag v1.0.0</div>
+    <ul>
+      <li>Port care-intelligence to be a <em>consumer</em> of agi-sdk via the <code>langgraph</code> adapter.</li>
+      <li>Plan for <code>bm-ai-platform</code> to depend on <code>agi-sdk</code> rather than carry its own runtime.</li>
+      <li>Security review, dependabot, secret-scanning, perf baseline.</li>
+      <li>Announce.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="resolved">
+  <h2><span class="num">§ 12</span>Resolved decisions <span class="badge good">from DEBATE.md</span></h2>
+
+  <div class="resolved"><div class="n">R1</div><div class="q"><strong>Deployment unit = pack-group-per-pod with claims-based dispatch.</strong> Hardening mode (single-pack-per-pod) as a Helm values flag. SDK is pack-dispatch-agnostic; runtime owns header dispatch.</div></div>
+
+  <div class="resolved"><div class="n">R2</div><div class="q"><strong>Runtime + UI = first-class Band 2 packages.</strong> Same repo, distinct altitude from SDK/Core. Library is the heart, deployable is supported.</div></div>
+
+  <div class="resolved"><div class="n">R3</div><div class="q"><strong>Prompts = YAML-in-pack source of truth.</strong> 15-minute hotfix lane via <code>pack-hotfix/&lt;ticket&gt;</code> branch + auto-rebuild. No DB-stored runtime editing.</div></div>
+
+  <div class="resolved"><div class="n">R4</div><div class="q"><strong>Model runner = LiteLLM library mode.</strong> No custom abstraction.</div></div>
+
+  <div class="resolved"><div class="n">R5</div><div class="q"><strong>Telemetry = OpenLLMetry auto-instrument (only).</strong> AI-Trail wired off the OTel collector as audit-only sink.</div></div>
+
+  <div class="resolved"><div class="n">R6</div><div class="q"><strong>Identity = Keycloak first-class reference adapter.</strong> Generic OIDC interface. Three-role RBAC at dispatch layer.</div></div>
+
+  <div class="resolved"><div class="n">R7</div><div class="q"><strong>Auto-MCP = first-class <code>agi-mcpfyer</code> repo.</strong> Build-time generator, not buried in SDK utilities.</div></div>
+
+  <div class="resolved"><div class="n">R8</div><div class="q"><strong>Orchestration = blessed-but-optional <code>langgraph</code> + <code>pydantic_ai</code> adapters.</strong> Plain async is default.</div></div>
+</section>
+
+<section id="decisions">
+  <h2><span class="num">§ 13</span>Open decisions <span class="badge warn">3 left · owner-pending</span></h2>
+
+  <div class="decision"><div class="n">1</div><div class="q"><strong>Repo location.</strong> <code>github.com/comviva-oss/project-agi</code>? Personal org? Net-new neutral org?</div></div>
+  <div class="decision"><div class="n">2</div><div class="q"><strong>Final name.</strong> <code>project-agi</code> is a working title. Candidates: <code>agi-sdk</code>, <code>openagent</code>, <code>agentkit</code>, <code>agi-stack</code>. Trademark check required.</div></div>
+  <div class="decision"><div class="n">3</div><div class="q"><strong>Eval harness depth.</strong> Promptfoo CLI direct, or thin wrapper for tenant-profile expansion? (Inherited from framework v0 doc § 7; debate didn't pick a side.)</div></div>
+</section>
+
+<section id="risks">
+  <h2><span class="num">§ 14</span>Risks</h2>
+
+  <div class="risk">
+    <div><div class="head">Comviva-proprietary code leaks into OSS repo</div></div>
+    <div class="body">Isolation-gate test + secret-scanning + manual diff review on every PR for first 90 days.</div>
+  </div>
+  <div class="risk">
+    <div><div class="head">Three runtimes (framework v0, bm-ai-platform, agi-sdk) diverge, tripling maintenance</div></div>
+    <div class="body">Phase 6 retrofit: make bm-ai-platform and care-intelligence consume agi-sdk; retire the framework v0 standalone runtime.</div>
+  </div>
+  <div class="risk">
+    <div><div class="head">"Framework gravity" — every use case gets bent to fit</div></div>
+    <div class="body">Escape hatch: any use case can drop to direct LiteLLM calls. SDK exposes underlying primitives so escape hatches don't lose tracing.</div>
+  </div>
+  <div class="risk">
+    <div><div class="head">Multi-pack-per-pod tenancy leak <span class="badge good">closed in v3</span></div></div>
+    <div class="body">Claims-based <code>X-Pack</code> dispatch (§ 6). Header validated against authenticated tenant claim; mismatch → 401. Fuzz test in CI.</div>
+  </div>
+  <div class="risk">
+    <div><div class="head">LangGraph commercial gravity</div></div>
+    <div class="body">Watch the <code>langgraph-api</code> Elastic-2.0 boundary. If checkpointing/HITL move behind LangGraph Platform, demote LangGraph and promote Pydantic-AI / Strands Agents.</div>
+  </div>
+  <div class="risk">
+    <div><div class="head">Open-source name collision / trademark</div></div>
+    <div class="body">Name search in Phase 0 before any public push.</div>
+  </div>
+</section>
+
+<section id="dod">
+  <h2><span class="num">§ 15</span>Definition of done (v1.0)</h2>
+  <ul>
+    <li><code>pip install agi-sdk</code> works on a clean machine — no Nexus, no VPN.</li>
+    <li><code>docker compose up</code> launches the full Band-2 stack (runtime + Langfuse + Qdrant) in &lt; 5 minutes.</li>
+    <li>A new tenant is added by dropping a folder under <code>packs/</code> and restarting — zero code changes.</li>
+    <li>Auto-MCP hub takes any OpenAPI spec and produces a runnable MCP server. TMF is a reference example.</li>
+    <li>OpenLLMetry traces land in Langfuse with <code>bm.pack</code> / <code>bm.use_case</code> / <code>bm.tenant_id</code> overlaid.</li>
+    <li>Pack hotfix completes ≤ 15 min from PR merge to live.</li>
+    <li>Multi-pack-per-pod runtime rejects any request whose <code>X-Pack</code> doesn't match its tenant claim.</li>
+    <li>Care-intelligence runs on agi-sdk with the <code>langgraph</code> adapter in dev.</li>
+    <li>Isolation-gate, lint, type-check, test, image-build, helm-chart-against-kind all pass on <code>main</code>.</li>
+  </ul>
+</section>
+
+<div class="footer">
+  Revision v3 · 2026-05-22 · <code>office/project-agi/PLAN.html</code> · Companion docs: <code>DEBATE.md</code> (transcript) · <code>RESOLVED_STACK.md</code> (decisions in detail) · <code>ADMIN_CONSOLE.md</code> (UI spec)
+</div>
+
+</div>
+</body>
+</html>

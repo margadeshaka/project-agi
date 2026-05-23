@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/**
+ * tokens.css — Material Design 3 tonal palette (indigo source).
+ *
+ * Ported from the Claude Design handoff bundle (2026-05-22). Hex literals
+ * are ONLY allowed here and in globals.css; the build-time linter
+ * (scripts/check-no-hex.ts) enforces this everywhere else.
+ *
+ * Token contract
+ * --------------
+ *   --md-primary / --md-on-primary             — high-emphasis actions
+ *   --md-secondary / --md-secondary-container  — buttons, filter chips, nav state
+ *   --md-tertiary / --md-tertiary-container    — accents, avatars
+ *   --md-surface / --md-surface-container-*    — elevation by tonal lift,
+ *                                                NOT shadows or borders
+ *   --md-on-surface / --md-on-surface-variant  — text on neutral surfaces
+ *   --md-outline / --md-outline-variant        — hairlines, focus rings
+ *   --md-success / --md-warning / --md-error   — semantic status
+ *   --md-shape-{xs,sm,md,lg,xl,full}           — corner radii
+ *   --md-elev-{1,2,3}                          — drop-shadow scale
+ *
+ * Theme switching: <html data-theme="dark"> (default) or "light".
+ * Density switching: <html data-density="compact|regular|comfy">.
+ */
+
+:root,
+[data-theme='dark'] {
+  --md-primary: #a8c7fa;
+  --md-on-primary: #062e6f;
+  --md-primary-container: #284777;
+  --md-on-primary-container: #d3e3fd;
+  --md-secondary: #bfc6dc;
+  --md-on-secondary: #283041;
+  --md-secondary-container: #3f4759;
+  --md-on-secondary-container: #dbe2f9;
+  --md-tertiary: #ddbce0;
+  --md-on-tertiary: #3f2844;
+  --md-tertiary-container: #573e5c;
+  --md-on-tertiary-container: #fbd7fc;
+  --md-error: #ffb4ab;
+  --md-on-error: #690005;
+  --md-error-container: #93000a;
+  --md-on-error-container: #ffdad6;
+  --md-surface: #111418;
+  --md-surface-dim: #111418;
+  --md-surface-bright: #36393e;
+  --md-surface-container-lowest: #0b0f13;
+  --md-surface-container-low: #191c20;
+  --md-surface-container: #1d2024;
+  --md-surface-container-high: #272a2f;
+  --md-surface-container-highest: #32353a;
+  --md-on-surface: #e1e2e8;
+  --md-on-surface-variant: #c4c6d0;
+  --md-outline: #8d9199;
+  --md-outline-variant: #43474e;
+  --md-success: #6fdc8c;
+  --md-success-container: #1f4d2d;
+  --md-on-success-container: #b8f0c5;
+  --md-warning: #ffd263;
+  --md-warning-container: #5c4500;
+  --md-on-warning-container: #ffe9a6;
+  --md-info: #b7c5ff;
+  --md-info-container: #3a4778;
+  --md-scrim: rgba(0, 0, 0, 0.6);
+  --md-elev-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-elev-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-elev-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='light'] {
+  --md-primary: #295ea7;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #d3e3fd;
+  --md-on-primary-container: #001b3d;
+  --md-secondary: #555f71;
+  --md-on-secondary: #ffffff;
+  --md-secondary-container: #dbe2f9;
+  --md-on-secondary-container: #131c2b;
+  --md-tertiary: #715574;
+  --md-on-tertiary: #ffffff;
+  --md-tertiary-container: #fbd7fc;
+  --md-on-tertiary-container: #29132e;
+  --md-error: #ba1a1a;
+  --md-on-error: #ffffff;
+  --md-error-container: #ffdad6;
+  --md-on-error-container: #410002;
+  --md-surface: #f8f9ff;
+  --md-surface-dim: #d8dae0;
+  --md-surface-bright: #f8f9ff;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f2f3fb;
+  --md-surface-container: #eceef6;
+  --md-surface-container-high: #e6e8f0;
+  --md-surface-container-highest: #e0e2ea;
+  --md-on-surface: #1a1c20;
+  --md-on-surface-variant: #43474e;
+  --md-outline: #74777f;
+  --md-outline-variant: #c4c6d0;
+  --md-success: #1f8a3d;
+  --md-success-container: #b8f0c5;
+  --md-on-success-container: #002106;
+  --md-warning: #875b00;
+  --md-warning-container: #ffdf9e;
+  --md-on-warning-container: #2a1c00;
+  --md-info: #4054b4;
+  --md-info-container: #dce1ff;
+  --md-elev-1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px 1px rgba(0, 0, 0, 0.04);
+  --md-elev-2: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 6px 2px rgba(0, 0, 0, 0.06);
+  --md-elev-3: 0 4px 8px 3px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+:root {
+  --md-shape-xs: 4px;
+  --md-shape-sm: 8px;
+  --md-shape-md: 12px;
+  --md-shape-lg: 16px;
+  --md-shape-xl: 28px;
+  --md-shape-full: 999px;
+
+  --font-ui: 'Roboto Flex', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --row-pad-y: 12px;
+  --row-pad-x: 16px;
+}
+
+[data-density='compact'] {
+  --row-pad-y: 8px;
+  --row-pad-x: 12px;
+}
+[data-density='comfy'] {
+  --row-pad-y: 16px;
+  --row-pad-x: 20px;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Backwards-compat aliases — old --agi-* tokens map onto M3.       */
+/*  Existing components that read these keep working untouched.      */
+/* ---------------------------------------------------------------- */
+:root,
+[data-theme='dark'] {
+  --agi-bg: var(--md-surface);
+  --agi-fg: var(--md-on-surface);
+  --agi-muted: var(--md-on-surface-variant);
+  --agi-accent: var(--md-primary);
+  --agi-border: var(--md-outline-variant);
+  --agi-success: var(--md-success);
+  --agi-warning: var(--md-warning);
+  --agi-danger: var(--md-error);
+}

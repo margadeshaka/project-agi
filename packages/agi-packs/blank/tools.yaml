@@ -1,0 +1,4 @@
+# MCP tool allow-list for the blank pack.
+# Empty list = the pack has no tool surface yet; use-cases that need tools must
+# extend this and the runtime will enforce it at dispatch.
+allow: []

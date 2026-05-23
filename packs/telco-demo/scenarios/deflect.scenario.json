@@ -1,0 +1,40 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "slug": "telco-deflect",
+  "pack": "telco-demo",
+  "title": "eSIM activation — deflect to KB",
+  "description": "Customer asks how to activate an eSIM. Answer must come from the KB with no autonomous tool action beyond kb.search.",
+  "category": "deflect",
+  "input": {
+    "customer_id": "cust-acme-1001",
+    "channel": "chat",
+    "locale": "en",
+    "utterances": [
+      "Hi, I just got my new phone — how do I activate the eSIM you sent me?"
+    ]
+  },
+  "context": {
+    "customer": {
+      "id": "cust-acme-1001",
+      "plan": "essentials-10gb",
+      "status": "active"
+    }
+  },
+  "expected_events": [
+    { "type": "agent.turn.start",  "match": { "scenario": "telco-deflect" } },
+    { "type": "tool.call",         "match": { "name": "kb.search" } },
+    { "type": "tool.result",       "match": { "name": "kb.search", "status": "ok" } },
+    { "type": "llm.response",      "match": { "role": "assistant" } },
+    { "type": "agent.turn.end",    "match": { "outcome": "deflected" } }
+  ],
+  "expected_no_events": [
+    { "type": "tool.call", "match": { "name": "billing.issue_credit" } },
+    { "type": "tool.call", "match": { "name": "ticket.escalate" } }
+  ],
+  "assertions": {
+    "kb_citation_required": true,
+    "max_response_sentences": 4,
+    "must_not_call_tools_outside_allowlist": true
+  }
+}

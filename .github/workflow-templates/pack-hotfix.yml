@@ -1,0 +1,228 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# pack-hotfix — reusable workflow for project-agi pack repositories.
+#
+# Triggers on branches matching `pack-hotfix/**`. Three jobs:
+#   smoke   : validate pack.yaml + render every Jinja prompt + scenario JSON
+#   build   : build a thin pack-bundle container image on top of agi-runtime,
+#             push to GHCR tagged `<slug>-<ticket-id>-<short-sha>`
+#   deploy  : POST the new image tag to a webhook so the operator can
+#             promote it through their normal rollout mechanism
+#
+# To adopt this template:
+#   1. Copy the file under .github/workflows/ in your pack repo.
+#   2. Set the `vars`/`secrets` listed under `env:` below in repo settings.
+
+name: pack-hotfix
+
+on:
+  push:
+    branches:
+      - "pack-hotfix/**"
+  workflow_dispatch:
+    inputs:
+      pack_slug:
+        description: "Pack slug under packs/"
+        required: true
+      ticket_id:
+        description: "Tracking ticket id, used in the image tag"
+        required: true
+
+env:
+  RUNTIME_IMAGE: "ghcr.io/comviva-oss/agi-runtime:0.5.0-dev"
+  GHCR_ORG: "comviva-oss"
+
+jobs:
+  smoke:
+    name: smoke — validate pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pack_slug: ${{ steps.detect.outputs.slug }}
+      ticket_id: ${{ steps.detect.outputs.ticket }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project-agi SDK
+        run: |
+          pip install --quiet \
+            "agi-sdk @ git+https://github.com/comviva-oss/project-agi#subdirectory=packages/agi-sdk" \
+            "jinja2>=3.1" "pyyaml>=6.0"
+
+      - id: detect
+        name: Detect pack slug + ticket id
+        run: |
+          if [ -n "${{ github.event.inputs.pack_slug }}" ]; then
+            SLUG="${{ github.event.inputs.pack_slug }}"
+            TICKET="${{ github.event.inputs.ticket_id }}"
+          else
+            BRANCH="${GITHUB_REF##*/}"      # pack-hotfix/<slug>/<ticket>
+            REST="${GITHUB_REF#refs/heads/pack-hotfix/}"
+            SLUG="${REST%%/*}"
+            TICKET="${REST##*/}"
+          fi
+          echo "slug=${SLUG}"   >> "${GITHUB_OUTPUT}"
+          echo "ticket=${TICKET}" >> "${GITHUB_OUTPUT}"
+          echo "Pack: ${SLUG} | Ticket: ${TICKET}"
+
+      - name: Validate pack.yaml
+        run: |
+          python - <<'PY'
+          from agi.packs import load_pack
+          import os, sys
+          slug = "${{ steps.detect.outputs.slug }}"
+          pack = load_pack(f"packs/{slug}")
+          print("loaded:", pack.slug, pack.version, "tools=", len(pack.tool_allowlist))
+          PY
+
+      - name: Render every prompt with sample context
+        run: |
+          python - <<'PY'
+          import pathlib, jinja2
+          slug = "${{ steps.detect.outputs.slug }}"
+          ctx = dict(
+              operator_name="Sample Operator",
+              support_hours="08:00-20:00 local",
+              handoff_queue="tier-2",
+              tools_available=["kb.search"],
+              locale="en",
+              customer_question="hello?",
+              user_question="hello?",
+              kb_excerpts=[],
+              customer=dict(id="c-1", plan="p", status="active"),
+              invoice=dict(id="i-1", amount=10, currency="USD", due_date="2026-01-01", line_items=[]),
+              credit_cap=25, policy_excerpt="...",
+              conversation_summary="n/a",
+              sentiment=dict(score=-0.1, label="neutral"),
+              route=dict(id="r-1", vehicle_id="v-1", current_leg="l-1", eta="t"),
+              incident=dict(id="i-1", type="t", severity="low", location="x", started_at="t"),
+              alternatives=[],
+              autonomy=dict(allow_reroute=False, max_eta_delta_min=15),
+              driver=dict(id="d", name="d", vehicle_id="v", current_route="r"),
+              incident_type="x",
+              delivery=dict(id="d", status="ok", eta="t", stop_sequence=1, exception_code="DEX-01"),
+          )
+          env = jinja2.Environment(undefined=jinja2.ChainableUndefined)
+          root = pathlib.Path(f"packs/{slug}/prompts")
+          for tpl in sorted(root.glob("*.j2")):
+              env.from_string(tpl.read_text()).render(**ctx)
+              print("rendered:", tpl)
+          PY
+
+      - name: Validate KB markdown files exist and are non-empty
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+          slug = "${{ steps.detect.outputs.slug }}"
+          kb = pathlib.Path(f"packs/{slug}/kb")
+          if not kb.is_dir():
+              print(f"::warning::no kb/ dir under {kb}")
+              sys.exit(0)
+          for md in sorted(kb.glob("*.md")):
+              body = md.read_text()
+              if len(body) < 50:
+                  raise SystemExit(f"KB article too short: {md}")
+              print("kb ok:", md)
+          PY
+
+      - name: Validate scenario JSON
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          slug = "${{ steps.detect.outputs.slug }}"
+          d = pathlib.Path(f"packs/{slug}/scenarios")
+          if not d.is_dir():
+              print("::warning::no scenarios/ dir")
+              sys.exit(0)
+          required = {"schema_version", "slug", "pack", "category", "expected_events"}
+          for f in sorted(d.glob("*.scenario.json")):
+              data = json.loads(f.read_text())
+              missing = required - data.keys()
+              if missing:
+                  raise SystemExit(f"{f}: missing keys {missing}")
+              print("scenario ok:", f)
+          PY
+
+  build:
+    name: build — pack bundle image
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.tag.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: tag
+        name: Compute image tag
+        run: |
+          SLUG="${{ needs.smoke.outputs.pack_slug }}"
+          TICKET="${{ needs.smoke.outputs.ticket_id }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TAG="ghcr.io/${GHCR_ORG}/agi-pack-${SLUG}:${TICKET}-${SHORT_SHA}"
+          echo "image_tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "Image tag: ${TAG}"
+
+      - name: Render Dockerfile
+        run: |
+          SLUG="${{ needs.smoke.outputs.pack_slug }}"
+          cat > Dockerfile.pack <<EOF
+          # SPDX-License-Identifier: Apache-2.0
+          # Pack-bundle image: agi-runtime + the hotfixed pack folder.
+          FROM ${RUNTIME_IMAGE}
+          COPY packs/${SLUG} /packs/${SLUG}
+          ENV AGI_HARDEN=1
+          ENV AGI_HARDEN_PACK=${SLUG}
+          EOF
+          cat Dockerfile.pack
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.pack
+          push: true
+          tags: ${{ steps.tag.outputs.image_tag }}
+
+  deploy:
+    name: deploy — notify rollout webhook
+    needs: [smoke, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: vars.PACK_HOTFIX_WEBHOOK_URL != ''
+    steps:
+      - name: POST notification
+        env:
+          WEBHOOK_URL: ${{ vars.PACK_HOTFIX_WEBHOOK_URL }}
+          WEBHOOK_TOKEN: ${{ secrets.PACK_HOTFIX_WEBHOOK_TOKEN }}
+        run: |
+          PAYLOAD=$(cat <<JSON
+          {
+            "pack_slug": "${{ needs.smoke.outputs.pack_slug }}",
+            "ticket_id": "${{ needs.smoke.outputs.ticket_id }}",
+            "image_tag": "${{ needs.build.outputs.image_tag }}",
+            "commit_sha": "${{ github.sha }}",
+            "ref": "${{ github.ref }}"
+          }
+          JSON
+          )
+          echo "Posting to ${WEBHOOK_URL}"
+          curl -fsS -X POST -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${WEBHOOK_TOKEN}" \
+            --data "${PAYLOAD}" \
+            "${WEBHOOK_URL}"

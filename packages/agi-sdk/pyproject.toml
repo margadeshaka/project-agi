@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agi-sdk"
+version = "0.1.0-dev"
+description = "project-agi Python SDK — primitives for building agentic use-cases against configurable packs"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [
+    { name = "project-agi contributors" },
+]
+keywords = ["agi", "agent", "llm", "mcp", "rag", "langgraph", "pydantic-ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2",
+    "pyyaml",
+    "litellm>=1.50",
+    "mcp",
+    "traceloop-sdk",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "jinja2",
+    "httpx",
+]
+
+[project.optional-dependencies]
+langgraph = ["langgraph>=1.0"]
+pydantic-ai = ["pydantic-ai>=1.0"]
+mongo = ["motor"]
+postgres = ["asyncpg"]
+qdrant = ["qdrant-client"]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "mypy",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/comviva-oss/project-agi"
+Repository = "https://github.com/comviva-oss/project-agi"
+Documentation = "https://github.com/comviva-oss/project-agi/blob/main/README.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agi"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "agi/",
+    "tests/",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -1,0 +1,47 @@
+{# SPDX-FileCopyrightText: 2026 project-agi contributors #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  Resolve prompt — route-incident explainer with an autonomous reroute
+  suggestion.
+
+  Context variables:
+    user_question: string
+    route:    { id, vehicle_id, current_leg, eta }
+    incident: { id, type, severity, location, started_at }
+    alternatives: list[ {id, eta_delta_min, toll, distance_km} ]
+    autonomy: { allow_reroute: bool, max_eta_delta_min: int }
+#}
+The dispatcher asked:
+
+  "{{ user_question }}"
+
+Active route:
+  id:           {{ route.id }}
+  vehicle:      {{ route.vehicle_id }}
+  current leg: {{ route.current_leg }}
+  eta:          {{ route.eta }}
+
+Incident:
+  id:        {{ incident.id }}
+  type:      {{ incident.type }}
+  severity:  {{ incident.severity }}
+  where:     {{ incident.location }}
+  started:   {{ incident.started_at }}
+
+Alternative routes ranked by ETA delta:
+{% for alt in alternatives | default([]) -%}
+  - {{ alt.id }}: +{{ alt.eta_delta_min }} min, {{ alt.distance_km }} km{% if alt.toll %}, toll{% endif %}
+
+{% endfor %}
+
+Decision rules:
+1. Explain the incident in two sentences using plain language.
+2. If `autonomy.allow_reroute` is true and the best alternative's
+   `eta_delta_min` is <= `{{ autonomy.max_eta_delta_min }}`, call
+   `route.suggest_alternative` and then `delivery.reschedule` if any
+   downstream stops are affected.
+3. If neither condition holds, do NOT mutate the route. State the
+   reason and recommend a manual decision.
+
+Always disclose the action you took (or refused to take) and cite the
+incident id.

@@ -1,0 +1,15 @@
+{{/* SPDX-License-Identifier: Apache-2.0 */}}
+{{- if and .Values.runtime.enabled .Values.runtime.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agi.runtime.fullname" . }}
+  labels:
+    {{- include "agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runtime
+spec:
+  minAvailable: {{ .Values.runtime.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "agi.runtime.selectorLabels" . | nindent 6 }}
+{{- end }}

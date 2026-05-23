@@ -1,0 +1,50 @@
+{{/* SPDX-License-Identifier: Apache-2.0 */}}
+{{- if .Values.runtime.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "agi.fullname" . }}-test-readiness
+  labels:
+    {{- include "agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: helm-test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  serviceAccountName: {{ include "agi.serviceAccountName" . }}
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: readyz
+      image: "{{ .Values.tests.image.repository }}:{{ .Values.tests.image.tag }}"
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          URL="http://{{ include "agi.runtime.fullname" . }}:{{ .Values.runtime.service.port }}/readyz"
+          echo "GET ${URL}"
+          # Retry for 60s — give the runtime time to come up.
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 3 "${URL}" >/dev/null; then
+              echo "ready"
+              exit 0
+            fi
+            echo "attempt ${i}: not ready, sleeping 2s"
+            sleep 2
+          done
+          echo "runtime did not become ready in 60s"
+          exit 1
+{{- end }}

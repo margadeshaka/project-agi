@@ -1,0 +1,42 @@
+{# SPDX-FileCopyrightText: 2026 project-agi contributors #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  Escalate prompt — driver-handoff to dispatch tier-2.
+
+  Context variables:
+    user_question: string
+    conversation_summary: string
+    driver: { id, name, vehicle_id, current_route }
+    handoff_queue: string
+    incident_type: string
+#}
+The dispatcher asked:
+
+  "{{ user_question }}"
+
+What has been tried so far:
+{{ conversation_summary }}
+
+Driver on this route:
+  id:       {{ driver.id }}
+  vehicle:  {{ driver.vehicle_id }}
+  route:    {{ driver.current_route }}
+
+Incident type: {{ incident_type }}
+
+You have decided to escalate. Do the following, in order:
+
+1. Call `ticket.create` with:
+     - priority: "high" if the incident type involves safety, an accident,
+       or a hijack risk; "normal" otherwise.
+     - tags: ["escalation", "{{ incident_type }}"]
+     - summary: <= 240 chars, written for a human tier-2 dispatcher.
+2. Call `ticket.escalate` routing to `{{ handoff_queue }}`.
+3. Reply in <= 3 sentences:
+     - Confirm the issue using the dispatcher's terms.
+     - State that a tier-2 dispatcher is being engaged with the driver
+       channel attached.
+     - Give the ticket id and an expected first-response window.
+
+Do not share driver PII over a customer channel. Do not promise an
+incident outcome.

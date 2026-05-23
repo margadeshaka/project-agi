@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "agi chart values",
+  "description": "Schema for values.yaml of the project-agi Helm chart. SPDX-License-Identifier: Apache-2.0",
+  "type": "object",
+  "required": ["global", "runtime", "ui", "auth", "llm", "storage", "vectorStore"],
+  "properties": {
+    "global": {
+      "type": "object",
+      "required": ["basePath", "hardening"],
+      "properties": {
+        "basePath": { "type": "string" },
+        "imagePullSecrets": { "type": "array", "items": { "type": "object" } },
+        "hardening": {
+          "type": "object",
+          "required": ["mode"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["multi", "single"] },
+            "pack": { "type": "string" }
+          }
+        }
+      }
+    },
+    "imagePullSecret": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "dockerconfigjson": { "type": "string" }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object" }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": { "create": { "type": "boolean" } }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["enabled", "image", "service", "resources", "packs"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "hardeningMode": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "required": ["repository"],
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "tag": { "type": "string" },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+          }
+        },
+        "service": {
+          "type": "object",
+          "required": ["type", "port"],
+          "properties": {
+            "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        },
+        "resources": { "$ref": "#/definitions/resourceRequirements" },
+        "podAnnotations": { "type": "object" },
+        "podLabels": { "type": "object" },
+        "podSecurityContext": { "type": "object" },
+        "securityContext": { "type": "object" },
+        "podAntiAffinity": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "topologyKey": { "type": "string" }
+          }
+        },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "autoscaling": {
+          "type": "object",
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minReplicas": { "type": "integer", "minimum": 1 },
+            "maxReplicas": { "type": "integer", "minimum": 1 },
+            "targetCPUUtilizationPercentage": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+            "targetMemoryUtilizationPercentage": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+          }
+        },
+        "pdb": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minAvailable": { "type": ["integer", "string"] }
+          }
+        },
+        "env": { "type": "object" },
+        "packs": {
+          "type": "object",
+          "required": ["mode"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["configmap", "pvc"] },
+            "configMapName": { "type": "string" },
+            "pvc": {
+              "type": "object",
+              "properties": {
+                "claimName": { "type": "string" },
+                "mountPath": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "image": {
+          "type": "object",
+          "required": ["repository"],
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "tag": { "type": "string" },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+          }
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "port": { "type": "integer" }
+          }
+        },
+        "resources": { "$ref": "#/definitions/resourceRequirements" },
+        "podSecurityContext": { "type": "object" },
+        "securityContext": { "type": "object" }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": ["mode", "oidc"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["keycloak", "static", "dev-noop"] },
+        "oidc": {
+          "type": "object",
+          "properties": {
+            "issuer": { "type": "string" },
+            "audience": { "type": "string" },
+            "tenantClaim": { "type": "string" },
+            "jwksUrl": { "type": "string" }
+          }
+        }
+      }
+    },
+    "llm": {
+      "type": "object",
+      "required": ["provider"],
+      "properties": {
+        "provider": { "type": "string", "enum": ["bedrock", "ollama", "openai", "anthropic", "fake"] },
+        "env": { "type": "object" }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "required": ["backend"],
+      "properties": {
+        "backend": { "type": "string", "enum": ["mongodb", "postgres"] },
+        "mongoUri": { "type": "string" },
+        "postgresUrl": { "type": "string" }
+      }
+    },
+    "vectorStore": {
+      "type": "object",
+      "required": ["backend"],
+      "properties": {
+        "backend": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "properties": {
+        "langfuse": {
+          "type": "object",
+          "properties": { "host": { "type": "string" } }
+        },
+        "otelCollector": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "image": { "type": "object" },
+            "resources": { "$ref": "#/definitions/resourceRequirements" }
+          }
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "egress": {
+          "type": "object",
+          "properties": {
+            "dns": { "type": "boolean" },
+            "cidrs": { "type": "array", "items": { "type": "string" } },
+            "fqdns": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object" },
+        "hosts": { "type": "array" },
+        "tls": { "type": "array" }
+      }
+    },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "image": { "type": "object" }
+      }
+    },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" }
+  },
+  "definitions": {
+    "resourceRequirements": {
+      "type": "object",
+      "properties": {
+        "requests": { "type": "object" },
+        "limits": { "type": "object" }
+      }
+    }
+  }
+}

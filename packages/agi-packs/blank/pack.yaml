@@ -1,0 +1,7 @@
+# Minimal reference pack — used by SDK tests and as the starter for new packs.
+slug: blank
+version: 0.1.0
+name: Blank reference pack
+models:
+  - reasoning
+  - fast

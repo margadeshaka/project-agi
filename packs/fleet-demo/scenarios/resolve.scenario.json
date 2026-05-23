@@ -1,0 +1,56 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "slug": "fleet-resolve",
+  "pack": "fleet-demo",
+  "title": "Route incident — autonomous reroute",
+  "description": "Dispatcher reports a route incident; an alternative within the autonomy budget is available. Assistant must reroute and reschedule affected stops.",
+  "category": "resolve",
+  "input": {
+    "user_id": "disp-002",
+    "channel": "console",
+    "locale": "en",
+    "utterances": [
+      "There's an accident on the M-204 affecting route rt-4412. Can we reroute?"
+    ]
+  },
+  "context": {
+    "route": {
+      "id": "rt-4412",
+      "vehicle_id": "veh-77",
+      "current_leg": "leg-3",
+      "eta": "2026-05-22T17:10:00Z"
+    },
+    "incident": {
+      "id": "inc-9981",
+      "type": "accident",
+      "severity": "high",
+      "location": "M-204 km 14",
+      "started_at": "2026-05-22T15:55:00Z"
+    },
+    "alternatives": [
+      { "id": "alt-a", "eta_delta_min": 8,  "toll": false, "distance_km": 6.2 },
+      { "id": "alt-b", "eta_delta_min": 22, "toll": true,  "distance_km": 11.0 }
+    ],
+    "autonomy": { "allow_reroute": true, "max_eta_delta_min": 15 }
+  },
+  "expected_events": [
+    { "type": "agent.turn.start", "match": { "scenario": "fleet-resolve" } },
+    { "type": "tool.call",        "match": { "name": "route.get_incidents" } },
+    { "type": "tool.result",      "match": { "name": "route.get_incidents", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "route.suggest_alternative", "args.route_id": "rt-4412" } },
+    { "type": "tool.result",      "match": { "name": "route.suggest_alternative", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "delivery.reschedule" } },
+    { "type": "tool.result",      "match": { "name": "delivery.reschedule", "status": "ok" } },
+    { "type": "llm.response",     "match": { "role": "assistant" } },
+    { "type": "agent.turn.end",   "match": { "outcome": "resolved" } }
+  ],
+  "expected_no_events": [
+    { "type": "tool.call", "match": { "name": "ticket.escalate" } }
+  ],
+  "assertions": {
+    "must_pick_alternative_within_budget": true,
+    "disclosure_required": true,
+    "must_cite_incident_id": "inc-9981"
+  }
+}

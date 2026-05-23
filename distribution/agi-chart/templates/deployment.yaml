@@ -1,0 +1,261 @@
+{{/* SPDX-License-Identifier: Apache-2.0 */}}
+{{- if .Values.runtime.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agi.runtime.fullname" . }}
+  labels:
+    {{- include "agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runtime
+spec:
+  {{- if not .Values.runtime.autoscaling.enabled }}
+  replicas: {{ .Values.runtime.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agi.runtime.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agi.runtime.selectorLabels" . | nindent 8 }}
+        {{- with .Values.runtime.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.runtime.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "agi.serviceAccountName" . }}
+      automountServiceAccountToken: true
+      securityContext:
+        {{- toYaml .Values.runtime.podSecurityContext | nindent 8 }}
+      {{- if or .Values.global.imagePullSecrets .Values.imagePullSecret.create }}
+      imagePullSecrets:
+        {{- with .Values.global.imagePullSecrets }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.imagePullSecret.create }}
+        - name: {{ .Values.imagePullSecret.name }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.runtime.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "agi.runtime.selectorLabels" . | nindent 20 }}
+                topologyKey: {{ .Values.runtime.podAntiAffinity.topologyKey }}
+      {{- end }}
+      {{- with .Values.runtime.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runtime.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: runtime
+          image: {{ include "agi.image" (dict "root" . "repo" .Values.runtime.image.repository "tag" .Values.runtime.image.tag) }}
+          imagePullPolicy: {{ .Values.runtime.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.runtime.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.runtime.service.port }}
+              protocol: TCP
+          env:
+            - name: BASE_PATH
+              value: {{ .Values.global.basePath | quote }}
+            - name: AGI_AUTH
+              value: {{ .Values.auth.mode | quote }}
+            {{- if .Values.auth.oidc.issuer }}
+            - name: AGI_OIDC_ISSUER
+              value: {{ .Values.auth.oidc.issuer | quote }}
+            - name: AGI_OIDC_AUDIENCE
+              value: {{ .Values.auth.oidc.audience | quote }}
+            - name: AGI_OIDC_TENANT_CLAIM
+              value: {{ .Values.auth.oidc.tenantClaim | quote }}
+            {{- if .Values.auth.oidc.jwksUrl }}
+            - name: AGI_OIDC_JWKS_URL
+              value: {{ .Values.auth.oidc.jwksUrl | quote }}
+            {{- end }}
+            {{- end }}
+            - name: AGI_LLM_PROVIDER
+              value: {{ .Values.llm.provider | quote }}
+            {{- if eq .Values.storage.backend "mongodb" }}
+            - name: AGI_MONGO_URI
+              value: {{ .Values.storage.mongoUri | quote }}
+            {{- else if eq .Values.storage.backend "postgres" }}
+            - name: AGI_PG_URL
+              value: {{ .Values.storage.postgresUrl | quote }}
+            {{- end }}
+            - name: AGI_QDRANT_URL
+              value: {{ .Values.vectorStore.url | quote }}
+            - name: LANGFUSE_HOST
+              value: {{ .Values.observability.langfuse.host | quote }}
+            {{- if or (eq .Values.global.hardening.mode "single") .Values.runtime.hardeningMode }}
+            - name: AGI_HARDEN
+              value: "1"
+            {{- if .Values.global.hardening.pack }}
+            - name: AGI_HARDEN_PACK
+              value: {{ .Values.global.hardening.pack | quote }}
+            {{- end }}
+            {{- end }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://localhost:4318"
+            {{- if .Values.observability.langfuse.host }}
+            - name: LANGFUSE_OTLP_ENDPOINT
+              value: "{{ .Values.observability.langfuse.host }}/api/public/otel"
+            {{- end }}
+            {{- range $k, $v := .Values.runtime.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- range $k, $v := .Values.llm.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.runtime.resources | nindent 12 }}
+          volumeMounts:
+            {{- if eq .Values.runtime.packs.mode "configmap" }}
+            - name: packs
+              mountPath: /packs
+              readOnly: true
+            {{- else if eq .Values.runtime.packs.mode "pvc" }}
+            - name: packs
+              mountPath: {{ .Values.runtime.packs.pvc.mountPath }}
+            {{- end }}
+            - name: tmp
+              mountPath: /tmp
+        {{- if .Values.observability.otelCollector.enabled }}
+        - name: otel-collector
+          image: "{{ .Values.observability.otelCollector.image.repository }}:{{ .Values.observability.otelCollector.image.tag }}"
+          args:
+            - "--config=/etc/otelcol/config.yaml"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          resources:
+            {{- toYaml .Values.observability.otelCollector.resources | nindent 12 }}
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otelcol
+              readOnly: true
+        {{- end }}
+      volumes:
+        {{- if eq .Values.runtime.packs.mode "configmap" }}
+        - name: packs
+          configMap:
+            name: {{ include "agi.packs.configmapName" . }}
+        {{- else if eq .Values.runtime.packs.mode "pvc" }}
+        - name: packs
+          persistentVolumeClaim:
+            claimName: {{ .Values.runtime.packs.pvc.claimName }}
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.observability.otelCollector.enabled }}
+        - name: otel-config
+          configMap:
+            name: {{ include "agi.fullname" . }}-otel
+            optional: true
+        {{- end }}
+{{- end }}
+{{- if .Values.ui.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agi.ui.fullname" . }}
+  labels:
+    {{- include "agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ui
+spec:
+  replicas: {{ .Values.ui.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "agi.ui.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agi.ui.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "agi.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.ui.podSecurityContext | nindent 8 }}
+      {{- if or .Values.global.imagePullSecrets .Values.imagePullSecret.create }}
+      imagePullSecrets:
+        {{- with .Values.global.imagePullSecrets }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.imagePullSecret.create }}
+        - name: {{ .Values.imagePullSecret.name }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: ui
+          image: {{ include "agi.image" (dict "root" . "repo" .Values.ui.image.repository "tag" .Values.ui.image.tag) }}
+          imagePullPolicy: {{ .Values.ui.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.ui.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ui.service.port }}
+          env:
+            - name: AGI_RUNTIME_URL
+              value: "http://{{ include "agi.runtime.fullname" . }}:{{ .Values.runtime.service.port }}"
+            - name: NEXT_PUBLIC_OIDC_ISSUER
+              value: {{ .Values.auth.oidc.issuer | quote }}
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /.cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+{{- end }}

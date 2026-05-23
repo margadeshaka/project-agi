@@ -1,0 +1,43 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "slug": "fleet-deflect",
+  "pack": "fleet-demo",
+  "title": "Delivery exception — KB lookup",
+  "description": "Dispatcher asks what a DEX-05 code means on an active delivery. Answer must come from the KB plus a status lookup; no mutating tool call.",
+  "category": "deflect",
+  "input": {
+    "user_id": "disp-001",
+    "channel": "console",
+    "locale": "en",
+    "utterances": [
+      "What does the DEX-05 on delivery del-1773 mean and what should I do?"
+    ]
+  },
+  "context": {
+    "delivery": {
+      "id": "del-1773",
+      "status": "exception",
+      "eta": "2026-05-22T16:40:00Z",
+      "stop_sequence": 4,
+      "exception_code": "DEX-05"
+    }
+  },
+  "expected_events": [
+    { "type": "agent.turn.start", "match": { "scenario": "fleet-deflect" } },
+    { "type": "tool.call",        "match": { "name": "delivery.get_status", "args.id": "del-1773" } },
+    { "type": "tool.result",      "match": { "name": "delivery.get_status", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "kb.search" } },
+    { "type": "tool.result",      "match": { "name": "kb.search", "status": "ok" } },
+    { "type": "llm.response",     "match": { "role": "assistant" } },
+    { "type": "agent.turn.end",   "match": { "outcome": "deflected" } }
+  ],
+  "expected_no_events": [
+    { "type": "tool.call", "match": { "name": "delivery.reschedule" } },
+    { "type": "tool.call", "match": { "name": "ticket.escalate" } }
+  ],
+  "assertions": {
+    "kb_citation_required": true,
+    "max_response_sentences": 4
+  }
+}

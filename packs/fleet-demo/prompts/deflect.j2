@@ -1,0 +1,34 @@
+{# SPDX-FileCopyrightText: 2026 project-agi contributors #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  Deflect prompt — delivery-exception triage handled entirely from the KB
+  and a status lookup. No mutating tool call.
+
+  Context variables:
+    user_question: string
+    delivery: { id, status, eta, stop_sequence, exception_code }
+    kb_excerpts: list[ {title, snippet, url} ]
+#}
+The dispatcher asked:
+
+  "{{ user_question }}"
+
+Delivery on file:
+  id:               {{ delivery.id }}
+  status:           {{ delivery.status }}
+  eta:              {{ delivery.eta }}
+  stop in route:    {{ delivery.stop_sequence }}
+  exception code:   {{ delivery.exception_code | default("none") }}
+
+Relevant KB excerpts:
+
+{% for excerpt in kb_excerpts | default([]) -%}
+[{{ loop.index }}] {{ excerpt.title }}
+{{ excerpt.snippet }}
+({{ excerpt.url | default("kb://internal") }})
+
+{% endfor %}
+
+Explain the exception code in plain dispatcher language, cite the KB
+excerpt that defines it, and give one recommended action. Keep the reply
+to <= 4 sentences. Do not call any mutating tool in this turn.

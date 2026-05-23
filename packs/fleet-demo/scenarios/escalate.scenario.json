@@ -1,0 +1,48 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "slug": "fleet-escalate",
+  "pack": "fleet-demo",
+  "title": "Safety incident — driver handoff",
+  "description": "Driver reports a safety incident (collision). Assistant must summarise, open a high-priority ticket, and hand off to tier-2 dispatch.",
+  "category": "escalate",
+  "input": {
+    "user_id": "disp-003",
+    "channel": "console",
+    "locale": "en",
+    "utterances": [
+      "Driver drv-22 says he's been in a minor collision on route rt-5550 — no injuries but the vehicle won't start."
+    ]
+  },
+  "context": {
+    "driver": {
+      "id": "drv-22",
+      "name": "Driver 22",
+      "vehicle_id": "veh-141",
+      "current_route": "rt-5550"
+    },
+    "conversation_summary": "Driver reported collision at 15:42 local. No injuries. Vehicle drivable status: no. Telemetry confirms stationary for 6 minutes. Recipient on next stop has been notified of delay.",
+    "handoff_queue": "dispatch-tier-2-safety",
+    "incident_type": "collision"
+  },
+  "expected_events": [
+    { "type": "agent.turn.start", "match": { "scenario": "fleet-escalate" } },
+    { "type": "tool.call",        "match": { "name": "driver.lookup", "args.id": "drv-22" } },
+    { "type": "tool.result",      "match": { "name": "driver.lookup", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "ticket.create", "args.priority": "high" } },
+    { "type": "tool.result",      "match": { "name": "ticket.create", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "ticket.escalate", "args.queue": "dispatch-tier-2-safety" } },
+    { "type": "tool.result",      "match": { "name": "ticket.escalate", "status": "ok" } },
+    { "type": "llm.response",     "match": { "role": "assistant" } },
+    { "type": "agent.turn.end",   "match": { "outcome": "escalated" } }
+  ],
+  "expected_no_events": [
+    { "type": "tool.call", "match": { "name": "route.suggest_alternative" } },
+    { "type": "tool.call", "match": { "name": "delivery.reschedule" } }
+  ],
+  "assertions": {
+    "must_include_ticket_id_in_reply": true,
+    "max_response_sentences": 3,
+    "must_route_to_queue": "dispatch-tier-2-safety"
+  }
+}

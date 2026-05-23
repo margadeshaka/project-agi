@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Operator config for the runtime Ollama smoke (B).
+# Points the `reasoning` role at the locally-running llama3.2 via LiteLLM's
+# Ollama provider. No tools, no Langfuse — minimum-viable real round-trip.
+
+operator_id: smoke-local
+max_steps: 4
+
+models:
+  reasoning:
+    model_id: ollama/llama3.2:latest
+    default_params:
+      temperature: 0.3
+      max_tokens: 128
+      api_base: http://localhost:11434

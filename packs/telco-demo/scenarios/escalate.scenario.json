@@ -1,0 +1,47 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "slug": "telco-escalate",
+  "pack": "telco-demo",
+  "title": "Number-portability dispute — escalate to tier-2",
+  "description": "Customer has a number-portability issue that exceeds autonomous authority. Assistant must summarise, open a ticket, and hand off.",
+  "category": "escalate",
+  "input": {
+    "customer_id": "cust-acme-1003",
+    "channel": "chat",
+    "locale": "en",
+    "utterances": [
+      "I started porting my number from another carrier three days ago and now I can't make calls. This is unacceptable, I need this fixed today."
+    ]
+  },
+  "context": {
+    "customer": {
+      "id": "cust-acme-1003",
+      "plan": "premium-unlimited",
+      "status": "porting"
+    },
+    "conversation_summary": "Customer initiated MNP three days ago. Donor carrier shows port complete; our HLR still shows pending. AI assistant already retried provisioning twice with no change.",
+    "handoff_queue": "tier-2-mobile",
+    "sentiment": { "score": -0.62, "label": "negative" }
+  },
+  "expected_events": [
+    { "type": "agent.turn.start", "match": { "scenario": "telco-escalate" } },
+    { "type": "tool.call",        "match": { "name": "customer.lookup" } },
+    { "type": "tool.result",      "match": { "name": "customer.lookup", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "ticket.create", "args.priority": "high" } },
+    { "type": "tool.result",      "match": { "name": "ticket.create", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "ticket.escalate", "args.queue": "tier-2-mobile" } },
+    { "type": "tool.result",      "match": { "name": "ticket.escalate", "status": "ok" } },
+    { "type": "llm.response",     "match": { "role": "assistant" } },
+    { "type": "agent.turn.end",   "match": { "outcome": "escalated" } }
+  ],
+  "expected_no_events": [
+    { "type": "tool.call", "match": { "name": "billing.issue_credit" } },
+    { "type": "tool.call", "match": { "name": "subscription.change_plan" } }
+  ],
+  "assertions": {
+    "must_include_ticket_id_in_reply": true,
+    "max_response_sentences": 3,
+    "must_route_to_queue": "tier-2-mobile"
+  }
+}

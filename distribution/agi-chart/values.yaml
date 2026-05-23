@@ -1,0 +1,250 @@
+# SPDX-License-Identifier: Apache-2.0
+# Default values for the `agi` chart.
+#
+# Every key is documented in docs/deploy/helm.md. The values here are
+# safe production-shaped defaults — small enough to fit a kind cluster,
+# large enough that nothing trips a NetworkPolicy or PodSecurity violation
+# out of the box.
+
+# ---------------------------------------------------------------------------
+# Global
+# ---------------------------------------------------------------------------
+global:
+  # Subdir routing per tenant — runtime mounts under this base path.
+  basePath: "/"
+  # Image pull secrets injected into every pod template. Use the
+  # `imagePullSecret.create=true` toggle below to have the chart create one
+  # for GHCR; otherwise reference a pre-existing secret here.
+  imagePullSecrets: []
+  # `multi` (default) hosts a pack-group per pod; `single` flips to
+  # hardening mode — one pack per pod, enforced by the runtime middleware
+  # via AGI_HARDEN=1.
+  hardening:
+    mode: multi          # multi | single
+    pack: ""             # required when mode=single
+
+# Optional: chart-managed pull secret for GHCR.
+imagePullSecret:
+  create: false
+  name: agi-ghcr
+  # Pre-encoded dockerconfigjson. Generate with `kubectl create secret
+  # docker-registry --dry-run=client -o jsonpath='{.data.\.dockerconfigjson}'`.
+  dockerconfigjson: ""
+
+# ---------------------------------------------------------------------------
+# Service account + RBAC
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: ""              # auto-derived when empty
+  annotations: {}
+
+rbac:
+  # Minimal Role + RoleBinding granting the runtime read access to its
+  # pack ConfigMap. Disable if you mount packs via PVC.
+  create: true
+
+# ---------------------------------------------------------------------------
+# agi-runtime
+# ---------------------------------------------------------------------------
+runtime:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ghcr.io/comviva-oss/agi-runtime
+    tag: ""             # defaults to .Chart.AppVersion when empty
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 9000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+  # Spread runtime replicas across nodes so a single node loss doesn't
+  # take the whole tenant offline.
+  podAntiAffinity:
+    enabled: true
+    topologyKey: kubernetes.io/hostname
+  nodeSelector: {}
+  tolerations: []
+  # Hardening mode toggle (also driven by `global.hardening.mode`).
+  hardeningMode: false
+  # Autoscaling.
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  # PodDisruptionBudget — keep at least one runtime pod available during
+  # voluntary disruptions.
+  pdb:
+    enabled: true
+    minAvailable: 1
+  env:
+    AGI_ENV: production
+    AGI_PORT: "9000"
+    AGI_APP_NAME: agi-runtime
+  # Pack mounting: `configmap` (default) or `pvc`.
+  packs:
+    mode: configmap
+    configMapName: ""
+    # When mode=pvc:
+    pvc:
+      claimName: ""
+      mountPath: /packs
+
+# ---------------------------------------------------------------------------
+# agi-ui
+# ---------------------------------------------------------------------------
+ui:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ghcr.io/comviva-oss/agi-ui
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+
+# ---------------------------------------------------------------------------
+# Identity (Keycloak / OIDC)
+# ---------------------------------------------------------------------------
+auth:
+  mode: keycloak            # keycloak | static | dev-noop
+  oidc:
+    issuer: ""              # e.g. https://kc.example.com/realms/agi
+    audience: agi-runtime
+    tenantClaim: tenant_id
+    jwksUrl: ""             # auto-derived from issuer when empty
+
+# ---------------------------------------------------------------------------
+# LLM provider env (LiteLLM-compatible)
+# ---------------------------------------------------------------------------
+llm:
+  provider: bedrock         # bedrock | ollama | openai | anthropic | fake
+  # Provider-specific env. Secrets belong in `extraEnvFrom: secretRef`.
+  env: {}
+
+# ---------------------------------------------------------------------------
+# Storage
+# ---------------------------------------------------------------------------
+storage:
+  backend: mongodb          # mongodb | postgres
+  mongoUri: ""              # e.g. mongodb://mongo:27017/agi
+  postgresUrl: ""
+
+# ---------------------------------------------------------------------------
+# Vector store
+# ---------------------------------------------------------------------------
+vectorStore:
+  backend: qdrant
+  url: ""
+
+# ---------------------------------------------------------------------------
+# Observability — Langfuse + OTel collector sidecar
+# ---------------------------------------------------------------------------
+observability:
+  langfuse:
+    # Base URL. The OTLP endpoint is built as `${host}/api/public/otel`.
+    host: ""
+  otelCollector:
+    enabled: true
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: "0.105.0"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Network policy
+# ---------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+  # CIDRs the runtime is allowed to reach. Add Bedrock/OpenAI/Anthropic
+  # public ranges, Langfuse host, vector store, and database. Empty list
+  # means "no egress except DNS" — only useful in fully air-gapped tests.
+  egress:
+    dns: true
+    cidrs: []
+    # If you prefer DNS-name based egress (Cilium / Calico), populate
+    # `fqdns` and disable cidrs.
+    fqdns:
+      - bedrock-runtime.us-east-1.amazonaws.com
+      - api.openai.com
+      - api.anthropic.com
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: agi.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: ui
+        - path: /api
+          pathType: Prefix
+          service: runtime
+  tls: []
+
+# ---------------------------------------------------------------------------
+# Helm test pod — invoked by `helm test`.
+# ---------------------------------------------------------------------------
+tests:
+  image:
+    repository: curlimages/curl
+    tag: "8.10.1"
+
+# ---------------------------------------------------------------------------
+# Extra env (both runtime + ui inherit `extra*` lists)
+# ---------------------------------------------------------------------------
+extraEnv: []
+extraEnvFrom: []

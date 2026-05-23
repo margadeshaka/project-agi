@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2026 project-agi contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# fleet-demo — vendor-neutral fleet-telematics reference pack.
+#
+# Bundles three demo scenarios (deflect / resolve / escalate) covering
+# delivery-exception triage, route-incident explainer, and driver-handoff
+# to dispatch.
+
+slug: fleet-demo
+version: 0.1.0
+name: Fleet demo pack
+
+models:
+  - reasoning
+  - fast
+  - embedding
+
+metadata:
+  vertical: fleet
+  display_name: ExampleCo Fleet (demo)
+  description: >-
+    Reference fleet-telematics pack used by the project-agi
+    getting-started flow. All copy is vendor-neutral; rebrand by editing
+    this manifest and the KB.
+  theme:
+    primary: "#1B5E20"
+    secondary: "#0D3311"
+    accent: "#FFB300"
+    mode: light
+  role_bindings:
+    system_prompt: prompts/system.j2
+    scenarios:
+      deflect: prompts/deflect.j2
+      resolve: prompts/resolve.j2
+      escalate: prompts/escalate.j2
+  kb:
+    article_count: 5
+    locale: en
+  scenarios:
+    - scenarios/deflect.scenario.json
+    - scenarios/resolve.scenario.json
+    - scenarios/escalate.scenario.json
+  contact:
+    support_hours: "24x7 dispatch desk"
+    handoff_queue: dispatch-tier-2

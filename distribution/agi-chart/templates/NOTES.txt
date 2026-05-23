@@ -1,0 +1,87 @@
+project-agi v{{ .Chart.AppVersion }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Components:
+  - agi-runtime: {{ if .Values.runtime.autoscaling.enabled }}HPA {{ .Values.runtime.autoscaling.minReplicas }}-{{ .Values.runtime.autoscaling.maxReplicas }}{{ else }}{{ .Values.runtime.replicaCount }} replica(s){{ end }}
+  - agi-ui     : {{ if .Values.ui.enabled }}{{ .Values.ui.replicaCount }} replica(s){{ else }}disabled{{ end }}
+  - hardening  : {{ .Values.global.hardening.mode }}{{ if eq .Values.global.hardening.mode "single" }} (pack: {{ .Values.global.hardening.pack }}){{ end }}
+
+Verify the runtime came up:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "agi.runtime.fullname" . }} {{ .Values.runtime.service.port }}:{{ .Values.runtime.service.port }}
+  curl http://localhost:{{ .Values.runtime.service.port }}/healthz
+
+Run the bundled smoke test:
+
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+{{- if .Values.ui.enabled }}
+
+Open the admin console:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "agi.ui.fullname" . }} {{ .Values.ui.service.port }}:{{ .Values.ui.service.port }}
+  open http://localhost:{{ .Values.ui.service.port }}
+{{- end }}
+
+=================================================================
+TOP 5 most-likely-misconfigured values — please double-check these
+=================================================================
+
+1. auth.oidc.issuer
+     current: {{ .Values.auth.oidc.issuer | default "(empty)" | quote }}
+     If empty and auth.mode is "keycloak", the runtime will refuse to
+     verify any token. Set it to your realm URL, e.g.
+       --set auth.oidc.issuer=https://kc.example.com/realms/agi
+
+2. packs (source of the pack config)
+     mode: {{ .Values.runtime.packs.mode }}
+     {{- if eq .Values.runtime.packs.mode "configmap" }}
+     configMap: {{ include "agi.packs.configmapName" . }}
+     The default ConfigMap ships only a README placeholder. Mount a
+     real pack with:
+       helm upgrade {{ .Release.Name }} . --set-file packs.config=packs/telco-demo/pack.yaml
+     {{- else }}
+     pvc.claimName: {{ .Values.runtime.packs.pvc.claimName | default "(empty)" }}
+     Pre-provision the PVC and verify its mount path is {{ .Values.runtime.packs.pvc.mountPath }}.
+     {{- end }}
+
+3. runtime.image.tag
+     current: {{ .Values.runtime.image.tag | default (print "(empty - defaults to chart appVersion " .Chart.AppVersion ")") }}
+     For production you almost always want to pin to a real, immutable
+     image tag rather than letting it float on AppVersion.
+
+4. ingress.hosts[0].host
+     enabled: {{ .Values.ingress.enabled }}
+     {{- if .Values.ingress.enabled }}
+     host: {{ (index .Values.ingress.hosts 0).host }}
+     {{- if not .Values.ingress.tls }}
+     WARNING: ingress is enabled but TLS is empty. Add a `tls:` block
+     for any non-loopback install.
+     {{- end }}
+     {{- else }}
+     Ingress is disabled. Enable with --set ingress.enabled=true and
+     set a real host.
+     {{- end }}
+
+5. observability.langfuse.host
+     current: {{ .Values.observability.langfuse.host | default "(empty)" | quote }}
+     {{- if not .Values.observability.langfuse.host }}
+     OTel sidecar will only debug-log spans. Point this at your Langfuse
+     deployment to get full traces:
+       --set observability.langfuse.host=https://langfuse.example.com
+     {{- end }}
+
+{{- if eq .Values.auth.mode "dev-noop" }}
+
+WARNING: AGI_AUTH=dev-noop is set. The runtime REFUSES to start if
+AGI_ENV=production. Set auth.mode=keycloak (or static) for any
+non-development install.
+{{- end }}
+
+{{- if not .Values.auth.oidc.issuer }}
+{{- if eq .Values.auth.mode "keycloak" }}
+
+WARNING: auth.mode=keycloak but auth.oidc.issuer is empty — the runtime
+will fail on first verify. Set auth.oidc.issuer to your Keycloak realm
+URL (e.g. https://kc.example.com/realms/agi).
+{{- end }}
+{{- end }}

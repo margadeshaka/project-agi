@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 project-agi contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# MCP tool allow-list for the fleet-demo pack.
+
+allow:
+  - kb.search
+  - vehicle.lookup
+  - delivery.get_status
+  - delivery.reschedule
+  - route.get_incidents
+  - route.suggest_alternative
+  - driver.lookup
+  - ticket.create
+  - ticket.escalate

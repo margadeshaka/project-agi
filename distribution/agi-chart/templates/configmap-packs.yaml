@@ -1,0 +1,17 @@
+{{/* SPDX-License-Identifier: Apache-2.0 */}}
+{{- if and .Values.runtime.enabled (eq .Values.runtime.packs.mode "configmap") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agi.packs.configmapName" . }}
+  labels:
+    {{- include "agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: packs
+data:
+  # Packs are typically loaded via `helm install --set-file` or by
+  # merging a separate ConfigMap. This placeholder makes the mount safe
+  # for a first `helm install` even if no packs are configured yet.
+  README.md: |
+    Mount your packs into this ConfigMap (or switch
+    `runtime.packs.mode=pvc`).
+{{- end }}

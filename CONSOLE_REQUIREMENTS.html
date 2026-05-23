@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>project-agi — admin console requirements (v1)</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#11151a; --panel-2:#161b22; --panel-3:#1c232c;
+    --ink:#e6edf3; --ink-muted:#9aa6b2; --ink-dim:#6b7684;
+    --line:#2a313a; --line-soft:#1f262e;
+    --accent:#4f9cf9; --accent-2:#7fc4ff;
+    --good:#3ecf8e; --warn:#f5b14d; --bad:#ff6b6b; --info:#a78bfa;
+    --code-bg:#0f1318;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f5f7fa; --panel:#fff; --panel-2:#f0f3f7; --panel-3:#e6ebf1;
+      --ink:#0f1419; --ink-muted:#475569; --ink-dim:#94a3b8;
+      --line:#dbe1e8; --line-soft:#e9edf2;
+      --accent:#1f6feb; --accent-2:#0a5bd4;
+      --good:#1a7f37; --warn:#bf8700; --bad:#cf222e; --info:#7c3aed;
+      --code-bg:#f1f4f8;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .page{max-width:1200px;margin:0 auto;padding:32px 24px 96px}
+
+  header.hero{padding:32px 32px 28px;background:radial-gradient(circle at top right,rgba(79,156,249,.08),transparent 60%),var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:28px}
+  header.hero h1{margin:0 0 8px;font-size:32px;letter-spacing:-0.02em}
+  header.hero .sub{margin:0 0 18px;color:var(--ink-muted);font-size:15px;max-width:80ch}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{display:inline-flex;align-items:center;padding:5px 11px;font-size:12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-muted);font-weight:500}
+  .pill.accent{background:rgba(79,156,249,.12);color:var(--accent);border-color:rgba(79,156,249,.35)}
+  .pill.good{background:rgba(62,207,142,.12);color:var(--good);border-color:rgba(62,207,142,.35)}
+  .pill.warn{background:rgba(245,177,77,.12);color:var(--warn);border-color:rgba(245,177,77,.35)}
+  .pill.info{background:rgba(167,139,250,.14);color:var(--info);border-color:rgba(167,139,250,.4)}
+
+  nav.toc{position:sticky;top:0;background:var(--bg);padding:12px 0;border-bottom:1px solid var(--line);margin:-8px 0 24px;display:flex;flex-wrap:wrap;gap:6px;z-index:5}
+  nav.toc a{font-size:13px;padding:6px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink-muted)}
+  nav.toc a:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
+
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;margin:0 0 22px}
+  section > h2{margin:0 0 4px;font-size:22px;letter-spacing:-0.01em;display:flex;align-items:baseline;gap:10px}
+  section > h2 .num{font-size:13px;color:var(--ink-dim);font-weight:500}
+  section > .lede{color:var(--ink-muted);margin:0 0 18px;font-size:14.5px;max-width:78ch}
+  h3{margin:24px 0 10px;font-size:14px;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+  h4{margin:14px 0 6px;font-size:14.5px}
+
+  ul,ol{padding-left:20px;margin:8px 0}
+  li{margin:4px 0}
+  code{background:var(--code-bg);border:1px solid var(--line-soft);padding:1px 6px;border-radius:5px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{color:var(--ink-muted);font-weight:600;background:var(--panel-2);font-size:11.5px;text-transform:uppercase;letter-spacing:0.07em}
+  tr:last-child td{border-bottom:none}
+  td.id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;font-weight:600;color:var(--accent);white-space:nowrap;width:80px}
+  td.must{white-space:nowrap;width:80px}
+
+  .req{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;border-left:4px solid var(--accent)}
+  .req .head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .req .id-tag{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:0.04em}
+  .req .title{font-weight:600;font-size:14.5px}
+  .req .meta{display:flex;gap:8px;flex-wrap:wrap}
+  .req p{margin:6px 0;font-size:13.5px;color:var(--ink)}
+  .req .ac{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+  .req .ac strong{color:var(--ink-muted);font-size:11.5px;text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:4px}
+  .req .ac ul{margin:0;padding-left:18px}
+  .req .ac li{font-size:13px;color:var(--ink-muted)}
+
+  .req.must{border-left-color:var(--bad)}
+  .req.should{border-left-color:var(--warn)}
+  .req.may{border-left-color:var(--good)}
+
+  .moscow{display:inline-block;padding:2px 8px;font-size:10.5px;font-weight:700;border-radius:5px;letter-spacing:0.07em}
+  .moscow.must{background:rgba(255,107,107,.14);color:var(--bad);border:1px solid rgba(255,107,107,.3)}
+  .moscow.should{background:rgba(245,177,77,.14);color:var(--warn);border:1px solid rgba(245,177,77,.3)}
+  .moscow.may{background:rgba(62,207,142,.14);color:var(--good);border:1px solid rgba(62,207,142,.3)}
+  .moscow.wont{background:var(--panel-3);color:var(--ink-dim);border:1px solid var(--line)}
+
+  .tag{display:inline-block;padding:1px 8px;font-size:10.5px;font-weight:600;border-radius:5px;background:var(--panel-3);color:var(--ink-muted);border:1px solid var(--line);letter-spacing:0.04em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px;font-size:14px}
+  .card p{margin:0;color:var(--ink-muted);font-size:13.5px}
+
+  .footer{color:var(--ink-muted);font-size:12.5px;text-align:center;margin-top:32px}
+  @media (max-width:720px){section{padding:18px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>agi-ui · console requirements</h1>
+  <p class="sub">Formal numbered requirements for the project-agi admin console. Each requirement has an ID, MoSCoW priority, traceability tags, and explicit acceptance criteria. Companion to <code>ADMIN_CONSOLE.md</code> (design narrative) and <code>EXECUTION_PLAN.html</code> § 4.4 (phase plan).</p>
+  <div class="pill-row">
+    <span class="pill accent">v1 · 2026-05-22</span>
+    <span class="pill good">~50 requirements · 8 categories</span>
+    <span class="pill warn">RFC-2119 keywords</span>
+    <span class="pill info">For Phase 4 · Weeks 8–9</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#scope">Scope</a>
+  <a href="#conventions">Conventions</a>
+  <a href="#personas">Personas</a>
+  <a href="#ia">FR-IA · Information Architecture</a>
+  <a href="#auth">FR-AUTH · Identity &amp; RBAC</a>
+  <a href="#pack">FR-PACK · Pack Management</a>
+  <a href="#tools">FR-TOOL · Tool Catalogue</a>
+  <a href="#kb">FR-KB · Knowledge Base</a>
+  <a href="#trail">FR-TRAIL · AI-Trail Viewer</a>
+  <a href="#llm">FR-LLM · Model Bindings</a>
+  <a href="#admin">FR-ADM · Admin / Audit Log</a>
+  <a href="#nfr">NFR · Non-functional</a>
+  <a href="#integ">FR-INT · Integration</a>
+  <a href="#exclude">Excluded</a>
+  <a href="#trace">Traceability</a>
+</nav>
+
+<!-- ===== SCOPE ===== -->
+<section id="scope">
+  <h2><span class="num">§ 1</span>Scope</h2>
+  <p class="lede">The admin console is part of the <strong>Reference Distribution</strong> (Band 2), not the SDK product. It ships in the <code>agi-ui</code> package and is optional — the runtime works headless. Day-to-day trace analysis lives in Langfuse; this UI handles what Langfuse cannot.</p>
+
+  <h3>In-scope</h3>
+  <ul>
+    <li>Browsing and inspecting <strong>packs</strong>, <strong>tools</strong>, <strong>KB articles</strong>, <strong>use-case services</strong>, <strong>LLM role bindings</strong>, and <strong>AI-Trail events</strong></li>
+    <li>Operator actions: pack reload, KB upload &amp; reindex, tool test-invoke</li>
+    <li>Admin actions: user/scope mapping, settings, audit log read</li>
+    <li>Authentication via OIDC (Keycloak reference) or static-token (dev)</li>
+  </ul>
+
+  <h3>Out-of-scope</h3>
+  <table>
+    <thead><tr><th>Not this UI</th><th>Lives in</th></tr></thead>
+    <tbody>
+      <tr><td>LLM trace browsing, cost dashboards, span trees</td><td>Langfuse</td></tr>
+      <tr><td>Eval runs and regression diffs</td><td>Promptfoo CLI</td></tr>
+      <tr><td>End-user agent chat</td><td>Use-case service's own HTTP/MCP surface</td></tr>
+      <tr><td>Authoring agent code or prompts</td><td>IDE + git repo</td></tr>
+      <tr><td>Editing prompts at runtime</td><td>Out of scope by policy — see EX-01</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== CONVENTIONS ===== -->
+<section id="conventions">
+  <h2><span class="num">§ 2</span>Conventions</h2>
+  <h3>RFC-2119 keywords</h3>
+  <ul>
+    <li><span class="moscow must">MUST</span> the implementation has to satisfy this. Phase gate blocker.</li>
+    <li><span class="moscow should">SHOULD</span> the implementation should satisfy this unless there is a documented exception.</li>
+    <li><span class="moscow may">MAY</span> optional. Nice-to-have. Slip allowed.</li>
+    <li><span class="moscow wont">WON'T</span> out of scope for v1.0. May land later.</li>
+  </ul>
+
+  <h3>Requirement ID format</h3>
+  <p>Each requirement is <code>&lt;CATEGORY&gt;-&lt;NN&gt;</code>. Categories follow ISO-style abbreviations:</p>
+  <ul>
+    <li><code>FR-IA</code> — Information Architecture</li>
+    <li><code>FR-AUTH</code> — Identity, Authentication, Authorization (RBAC)</li>
+    <li><code>FR-PACK</code> — Pack management</li>
+    <li><code>FR-TOOL</code> — Tool catalogue</li>
+    <li><code>FR-KB</code> — Knowledge Base</li>
+    <li><code>FR-TRAIL</code> — AI-Trail (audit) viewer</li>
+    <li><code>FR-LLM</code> — Model role bindings</li>
+    <li><code>FR-ADM</code> — Admin pages (users, log, settings)</li>
+    <li><code>FR-INT</code> — Backend integration contracts</li>
+    <li><code>NFR-*</code> — Non-functional (PERF, SEC, A11Y, OBS, etc.)</li>
+    <li><code>EX-NN</code> — Explicit exclusions</li>
+  </ul>
+
+  <h3>Traceability tags</h3>
+  <p>Each requirement carries one or more tags pointing to source artefacts:</p>
+  <ul>
+    <li><span class="tag">PLAN-§6</span> — section of <code>PLAN.html</code></li>
+    <li><span class="tag">ADMIN-§3.4</span> — section of <code>ADMIN_CONSOLE.md</code></li>
+    <li><span class="tag">DECISION-R3</span> — ratified decision in <code>RESOLVED_STACK.md</code></li>
+    <li><span class="tag">DEBATE</span> — surfaced in the framework/platform debate</li>
+  </ul>
+</section>
+
+<!-- ===== PERSONAS ===== -->
+<section id="personas">
+  <h2><span class="num">§ 3</span>Personas &amp; scopes</h2>
+  <table>
+    <thead><tr><th>Persona</th><th>Primary scope</th><th>Can read</th><th>Can write</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Platform admin</strong><br>Comviva delivery / customer DevOps</td>
+        <td><code>agi:admin</code></td>
+        <td>Everything</td>
+        <td>Pack reload, KB upload &amp; reindex, role rebinding override (session), settings</td>
+      </tr>
+      <tr>
+        <td><strong>Tenant operator</strong><br>L2 ops at customer site</td>
+        <td><code>agi:operator:&lt;slug&gt;</code></td>
+        <td>Their pack only</td>
+        <td>Their pack's KB upload &amp; reindex, pack reload</td>
+      </tr>
+      <tr>
+        <td><strong>Developer</strong><br>Use-case author</td>
+        <td><code>agi:dev</code></td>
+        <td>Tool catalogue, AI-Trail (cross-pack)</td>
+        <td>Tool test-invoke (still gated on tool's own scope)</td>
+      </tr>
+      <tr>
+        <td><strong>Auditor / viewer</strong><br>Compliance, regulator</td>
+        <td><code>agi:viewer</code></td>
+        <td>AI-Trail, admin log</td>
+        <td>Nothing</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== FR-IA ===== -->
+<section id="ia">
+  <h2><span class="num">§ 4</span>Information Architecture · <code>FR-IA</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-IA-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§2</span></div></div>
+    <div class="title">Provide a flat, role-aware top-level navigation</div>
+    <p>The console MUST render a single-level sidebar nav with items: <em>Health</em>, <em>Packs</em>, <em>Tools</em>, <em>Use cases</em>, <em>Audit</em>, <em>LLM</em>, <em>Admin</em>. Items the user lacks scope for MUST be hidden, not greyed.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Signed in as <code>agi:operator:telco-demo</code>: sidebar shows only <em>Packs</em> (auto-deeplinked) + <em>Audit</em></li>
+        <li>Signed in as <code>agi:admin</code>: all items visible</li>
+        <li>No layout shift on signin/signout</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-IA-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.1</span></div></div>
+    <div class="title">Health dashboard at landing route</div>
+    <p>Route <code>/</code> MUST show service health rows for: agi-runtime, agi-core hub, vector store, Langfuse, each configured LLM provider, and storage. Each row MUST link to its detail page.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>All rows render within 500ms of route mount</li>
+        <li>Health colours: green / amber / red; reading order matches PLAN.html § anatomy</li>
+        <li>Status text includes last-checked timestamp</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-IA-03</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§2</span></div></div>
+    <div class="title">Auto-deeplink tenant operators</div>
+    <p>On signin, a user whose only scope is <code>agi:operator:&lt;slug&gt;</code> SHOULD be redirected to <code>/packs/&lt;slug&gt;/overview</code> instead of <code>/</code>.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Multi-pack operators land on a pack switcher chooser</li>
+        <li>Admins are not redirected (they keep <code>/</code>)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-IA-04</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§9</span></div></div>
+    <div class="title">Empty and error states</div>
+    <p>Every page MUST render a meaningful empty-state and error-state. No raw 500/JSON dumps; no flicker between loading and error.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Zero packs deployed → packs route shows onboarding hint with docs link</li>
+        <li>Langfuse unreachable → health row turns amber with last-known timestamp</li>
+        <li>Insufficient scope → page renders "You don't have access to this page" with link back</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FR-AUTH ===== -->
+<section id="auth">
+  <h2><span class="num">§ 5</span>Identity &amp; RBAC · <code>FR-AUTH</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-AUTH-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">DECISION-R6</span><span class="tag">PLAN-§9</span></div></div>
+    <div class="title">OIDC sign-in via configured issuer</div>
+    <p>The console MUST authenticate users via the configured OIDC issuer (Keycloak as reference adapter). The console MUST NOT mint or hold password credentials.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>OIDC callback exchanges code for tokens; tokens stored httpOnly</li>
+        <li>Refresh-token rotation handled silently while session is active</li>
+        <li>Local Keycloak sample realm shipped for dev</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-AUTH-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">PLAN-§6</span><span class="tag">DECISION-R1</span></div></div>
+    <div class="title">Three-role RBAC enforced server-side</div>
+    <p>The runtime MUST enforce scopes: <code>agi:admin</code>, <code>agi:operator:&lt;slug&gt;</code>, <code>agi:dev</code>, <code>agi:viewer</code>. The console hides nav for scopes the user lacks; the runtime rejects requests for scopes the user lacks. <strong>Both</strong> required — UI hiding is never the security boundary.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Direct URL nav to a forbidden route returns the empty-state, not a 200 with data</li>
+        <li>Direct API call with insufficient scope returns 403, not 200</li>
+        <li>Penetration test: tampered scope claim is rejected at JWT verify</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-AUTH-03</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">DECISION-R1</span><span class="tag">DEBATE</span></div></div>
+    <div class="title">Claims-based pack scoping</div>
+    <p>Operator scopes MUST encode the pack slug they apply to. The runtime MUST validate the requested <code>X-Pack</code> against the user's tenant claim on every request; mismatch returns 401.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Fuzz test: 1000 random claim/header pairs → 0 leaks past 401</li>
+        <li>Token tenant claim is sole source of truth; header alone never determines pack</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-AUTH-04</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§5</span></div></div>
+    <div class="title">Static-token + dev-noop modes</div>
+    <p>The auth adapter SHOULD support a static-token mode (single token, fixed scope) and a dev-noop mode (anonymous, full scope) for local dev. Production deploys MUST NOT enable dev-noop; image MUST refuse to start with <code>AGI_AUTH_MODE=dev-noop</code> if <code>AGI_ENV=production</code>.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Image start with prod+dev-noop combo emits an error and exits non-zero</li>
+        <li>Docs explicitly warn about dev-noop</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FR-PACK ===== -->
+<section id="pack">
+  <h2><span class="num">§ 6</span>Pack management · <code>FR-PACK</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-PACK-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.2</span></div></div>
+    <div class="title">Pack list and detail</div>
+    <p>Route <code>/packs</code> MUST list all packs the user has scope to see, with identity (slug, display name, vertical), source path, and SHA. Route <code>/packs/:slug/overview</code> MUST show identity, theme preview, role bindings, tool allow-list, and recent activity stats.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Pack list table virtualised; scrolls smoothly with 100+ packs</li>
+        <li>Theme preview shows the active pack's <code>theme.primary</code> as a swatch with hex</li>
+        <li>Recent activity stats refresh every 30s without full reload</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-PACK-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">PLAN-§7</span><span class="tag">DECISION-R3</span></div></div>
+    <div class="title">Pack reload action</div>
+    <p>Pack overview MUST expose a "Reload pack" button that calls <code>POST /admin/packs/:slug/reload</code>. Action MUST be gated on <code>agi:admin</code> or <code>agi:operator:&lt;slug&gt;</code>. Outcome MUST be logged in admin log within 1 second.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Success toast within 2s of click</li>
+        <li>Failure shows the runtime error body (RFC-9457 problem-details)</li>
+        <li>Operator scoped to a different pack cannot trigger the action</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-PACK-03</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">DECISION-R3</span><span class="tag">DEBATE</span></div></div>
+    <div class="title">Prompts shown read-only</div>
+    <p>Pack detail MAY show prompts; if shown, the UI MUST render them read-only with no edit, save, or delete affordance. The data source is the active pack's filesystem; runtime-edit endpoints MUST NOT exist.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Prompts page has no form controls, only a syntax-highlighted viewer</li>
+        <li>Backend has no <code>POST /prompts</code> or <code>PATCH /prompts</code> route</li>
+        <li>Audit reviewer signs off: no path to runtime prompt mutation</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-PACK-04</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">PLAN-§7</span></div></div>
+    <div class="title">Hotfix lane visibility</div>
+    <p>Pack detail SHOULD show the latest hotfix branches (read from <code>GET /admin/packs/:slug/hotfix-status</code>) with merge status and time-since-deploy.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Shows up to 5 most recent <code>pack-hotfix/*</code> branches</li>
+        <li>Time-since-deploy refreshes without manual reload</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FR-TOOL ===== -->
+<section id="tools">
+  <h2><span class="num">§ 7</span>Tool catalogue · <code>FR-TOOL</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-TOOL-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.3</span></div></div>
+    <div class="title">Cross-pack and pack-scoped tool catalogues</div>
+    <p>Route <code>/tools</code> MUST list every tool emitted by agi-mcpfyer. Route <code>/packs/:slug/tools</code> MUST show only the tools allow-listed for that pack. Both views MUST display: name, domain, side-effect badge, rate-limit class, bundle version, and consuming-pack count.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Search + domain filter + side-effect filter all apply client-side</li>
+        <li>Side-effect badge: <code>read</code> / <code>write</code> distinguishable to colour-blind users</li>
+        <li>Bundle version is clickable to bundle changelog</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-TOOL-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.3</span></div></div>
+    <div class="title">Tool detail with JSON Schema</div>
+    <p>Route <code>/tools/:name</code> MUST render the tool's input and output JSON Schema, source OpenAPI op, side-effect flag, rate-limit class, dry-run support, and last build SHA.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>JSON Schema collapsible by nested object</li>
+        <li>"Copy as MCP call" button copies a curl-shaped request to clipboard</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-TOOL-03</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.3</span></div></div>
+    <div class="title">Test-invoke with schema-driven form</div>
+    <p>Tool detail MUST expose a "Test invoke" panel that renders a form from the input JSON Schema (via Zod). Submitting calls <code>POST /tools/:name</code> and shows the response + a link to the resulting AI-Trail entry by correlation_id.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Required fields validated client-side before submit</li>
+        <li>Write/side-effecting tools require an explicit confirm step</li>
+        <li>Returned correlation_id is a clickable link to <code>/audit/:cid</code></li>
+        <li>Failure shows RFC-9457 problem-details JSON with surface-level summary</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-TOOL-04</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§3.3</span></div></div>
+    <div class="title">Dry-run mode for write tools</div>
+    <p>For tools with <code>side_effecting: true</code> and <code>dry_run_supported: true</code>, the test-invoke panel SHOULD offer a "Dry run" toggle that calls the tool with <code>X-Dry-Run: 1</code>. Default state is dry-run ON.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Toggle state persists per-session (not per-tool)</li>
+        <li>Visual indicator on the button differentiates dry-run from live</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FR-KB ===== -->
+<section id="kb">
+  <h2><span class="num">§ 8</span>Knowledge Base · <code>FR-KB</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-KB-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.4</span></div></div>
+    <div class="title">Per-pack KB browser</div>
+    <p>Route <code>/packs/:slug/kb</code> MUST list KB articles for the pack with: title, source format, size, chunk count, last-reindex timestamp.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Search bar performs vector + text hybrid search via runtime</li>
+        <li>Stale-index warning if last reindex &gt; 24h</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-KB-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.4</span></div></div>
+    <div class="title">KB article upload</div>
+    <p>The KB browser MUST allow uploading markdown or JSON files via <code>POST /kb</code> (multipart). Upload MUST be gated on <code>agi:operator:&lt;slug&gt;</code> or <code>agi:admin</code>.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Drag-and-drop + click-to-pick both work</li>
+        <li>Files validated as text/markdown or application/json before send</li>
+        <li>Successful upload appears in list without manual refresh</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-KB-03</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.4</span></div></div>
+    <div class="title">Reindex action</div>
+    <p>KB browser MUST expose a "Reindex now" action that calls <code>POST /admin/kb/:slug/reindex</code> and shows progress. Action MUST be auditable.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Progress bar updates from a server-sent event stream</li>
+        <li>Result includes total chunks indexed and elapsed time</li>
+        <li>Failure does not block other actions on the page</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-KB-04</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§3.4</span></div></div>
+    <div class="title">Article preview &amp; per-article actions</div>
+    <p>KB browser SHOULD allow previewing an article's rendered content and supporting per-article re-embed and delete actions.</p>
+  </div>
+</section>
+
+<!-- ===== FR-TRAIL ===== -->
+<section id="trail">
+  <h2><span class="num">§ 9</span>AI-Trail viewer · <code>FR-TRAIL</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-TRAIL-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.5</span><span class="tag">DECISION-R5</span></div></div>
+    <div class="title">Audit list with filters</div>
+    <p>Route <code>/audit</code> MUST list AI-Trail events filterable by pack, event type, and time range. The list MUST be virtualised; default time range is last 24h.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Scrolls smoothly at 100k events</li>
+        <li>Filter changes do not reset scroll position</li>
+        <li>URL reflects active filters (deep-linkable)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-TRAIL-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.5</span></div></div>
+    <div class="title">Correlation_id detail page with event tree</div>
+    <p>Route <code>/audit/:correlation_id</code> MUST render the full event tree for one agent run, in chronological order, with per-event payload viewable.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Event tree renders even for runs with 500+ events</li>
+        <li>Payload viewer copy-to-clipboard works on every event</li>
+        <li>Side-effect events visually distinct (red dot)</li>
+        <li>Tool-call events link to the tool detail page</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-TRAIL-03</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§3.5</span></div></div>
+    <div class="title">Deep-link to Langfuse for engineering traces</div>
+    <p>The correlation_id page SHOULD include a button "Open same run in Langfuse" that deep-links to the Langfuse trace search filtered by the same correlation_id.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>If Langfuse is unreachable, the button is disabled with explanation tooltip</li>
+        <li>Langfuse endpoint URL comes from operator settings, not hard-coded</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req may">
+    <div class="head"><span class="id-tag">FR-TRAIL-04</span><div class="meta"><span class="moscow may">MAY</span><span class="tag">ADMIN-§3.5</span></div></div>
+    <div class="title">CSV export of filtered audit list</div>
+    <p>The audit list MAY support exporting the filtered event set as CSV for regulator reports.</p>
+  </div>
+</section>
+
+<!-- ===== FR-LLM ===== -->
+<section id="llm">
+  <h2><span class="num">§ 10</span>Model role bindings · <code>FR-LLM</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-LLM-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.6</span><span class="tag">DECISION-R4</span></div></div>
+    <div class="title">Read-only role-to-model view</div>
+    <p>Route <code>/llm</code> MUST show all configured roles with their bound model_id, region, default params, and provider health. The view MUST NOT permit edits; this is a read surface.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Operator config is the source of truth; UI never writes to it</li>
+        <li>Provider health pings refresh every 30s; failures shown amber/red</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-LLM-02</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§3.6</span></div></div>
+    <div class="title">Session-scoped LLM override for admins</div>
+    <p>Admins SHOULD be able to set a per-session <code>X-LLM-Override</code> header value via a "Rebind for this session" control. Override MUST NOT persist beyond the session and MUST apply only to that admin's subsequent calls.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Override is cleared on logout</li>
+        <li>UI banner indicates an override is active</li>
+        <li>Override events are in admin log</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FR-ADM ===== -->
+<section id="admin">
+  <h2><span class="num">§ 11</span>Admin · <code>FR-ADM</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-ADM-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.8</span></div></div>
+    <div class="title">Admin action audit log</div>
+    <p>Every write action initiated from the console (pack reload, KB upload, KB reindex, LLM override) MUST appear in <code>/admin/log</code> within 1 second of completion. Log entries MUST include actor identity, action, target, timestamp, and result code.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Log is append-only at the runtime layer</li>
+        <li>Log entry latency &lt; 1s in 99th percentile</li>
+        <li>Failed actions appear with their error</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-ADM-02</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§3.8</span></div></div>
+    <div class="title">Users / scope mapping view</div>
+    <p>Route <code>/admin/users</code> MUST list OIDC-issued identities currently active, with their resolved scopes. The view MUST NOT permit edits; user/scope provisioning lives in the OIDC issuer (Keycloak), not here.</p>
+    <div class="ac"><strong>Acceptance</strong>
+      <ul>
+        <li>Identity rows refresh every 60s</li>
+        <li>Scopes column displays scope strings as chips</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-ADM-03</span><div class="meta"><span class="moscow should">SHOULD</span><span class="tag">ADMIN-§3.8</span></div></div>
+    <div class="title">Operator settings page</div>
+    <p>Route <code>/admin/settings</code> SHOULD show the operator-level configuration (Langfuse URL, vector-store URL, OIDC issuer, telemetry sampling) read-only. The view links to the YAML location for edits.</p>
+  </div>
+</section>
+
+<!-- ===== NFR ===== -->
+<section id="nfr">
+  <h2><span class="num">§ 12</span>Non-functional · <code>NFR-*</code></h2>
+
+  <h3>Performance · <code>NFR-PERF</code></h3>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-PERF-01</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">First paint &lt; 1s on cable</div>
+    <p>Initial paint for <code>/</code> MUST be ≤ 1000ms on a 5 Mbps connection from a cold cache. Bundle size MUST be ≤ 250 KB gzipped on initial chunk.</p>
+  </div>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-PERF-02</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">Image size &lt; 60 MB</div>
+    <p>The published <code>agi-ui</code> container image MUST be ≤ 60 MB compressed.</p>
+  </div>
+
+  <h3>Accessibility · <code>NFR-A11Y</code></h3>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-A11Y-01</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">Lighthouse a11y score ≥ 95</div>
+    <p>Every top-level route MUST score ≥ 95 on Lighthouse accessibility. WCAG 2.1 Level AA contrast on all text. All interactive elements keyboard-navigable. Focus visible.</p>
+  </div>
+
+  <h3>Security · <code>NFR-SEC</code></h3>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-SEC-01</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">No client-side secrets</div>
+    <p>The console MUST NOT embed API keys, signing secrets, or service credentials in the client bundle.</p>
+  </div>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-SEC-02</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">HttpOnly + Secure session cookies</div>
+    <p>Session cookies MUST be httpOnly, Secure, SameSite=Lax. Refresh tokens MUST NOT be exposed to JavaScript.</p>
+  </div>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-SEC-03</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">CSP enforced</div>
+    <p>The console MUST set a Content-Security-Policy header that disallows inline scripts (except hashed/nonced where unavoidable) and limits connect-src to the configured runtime origin.</p>
+  </div>
+  <div class="req should">
+    <div class="head"><span class="id-tag">NFR-SEC-04</span><div class="meta"><span class="moscow should">SHOULD</span></div></div>
+    <div class="title">Brute-force protection on the runtime</div>
+    <p>The runtime SHOULD rate-limit OIDC callback failures per source IP. The console SHOULD show a generic error for repeated failures, not signal which step failed.</p>
+  </div>
+
+  <h3>Observability · <code>NFR-OBS</code></h3>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-OBS-01</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">Console emits structured logs</div>
+    <p>Server-side console code MUST emit structured JSON logs with request-id, route, scope, status, latency.</p>
+  </div>
+
+  <h3>Theming · <code>NFR-THM</code></h3>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-THM-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§6</span></div></div>
+    <div class="title">No hex literals in components</div>
+    <p>Components MUST consume CSS custom properties resolved from the active pack's <code>theme</code> block. Build MUST fail if a component contains a hex literal outside the token definitions file.</p>
+  </div>
+  <div class="req should">
+    <div class="head"><span class="id-tag">NFR-THM-02</span><div class="meta"><span class="moscow should">SHOULD</span></div></div>
+    <div class="title">Dark/light follows prefers-color-scheme</div>
+    <p>Theme SHOULD respect <code>@media (prefers-color-scheme)</code> by default with a user override stored per-session.</p>
+  </div>
+
+  <h3>I18N · <code>NFR-I18N</code></h3>
+  <div class="req should">
+    <div class="head"><span class="id-tag">NFR-I18N-01</span><div class="meta"><span class="moscow should">SHOULD</span></div></div>
+    <div class="title">i18n hook in place; English-only at v1</div>
+    <p>The console SHOULD use <code>next-intl</code> (or equivalent) for all user-facing strings, even if only English is shipped at v1.</p>
+  </div>
+
+  <h3>Browser support · <code>NFR-CMP</code></h3>
+  <div class="req must">
+    <div class="head"><span class="id-tag">NFR-CMP-01</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">Latest two versions of Chrome, Firefox, Safari, Edge</div>
+    <p>The console MUST function on the latest two versions of each major browser. Lower-than-required versions MAY show a soft warning.</p>
+  </div>
+</section>
+
+<!-- ===== FR-INT ===== -->
+<section id="integ">
+  <h2><span class="num">§ 13</span>Integration contracts · <code>FR-INT</code></h2>
+
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-INT-01</span><div class="meta"><span class="moscow must">MUST</span><span class="tag">ADMIN-§4</span></div></div>
+    <div class="title">REST contract served by agi-runtime</div>
+    <p>All console API calls MUST go through the agi-runtime endpoints listed in ADMIN_CONSOLE.md §4. The console MUST NOT call vector stores, Mongo, or LLM providers directly.</p>
+  </div>
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-INT-02</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">Errors as RFC-9457 problem-details</div>
+    <p>Backend errors MUST be returned as RFC 9457 problem-details JSON. The console MUST surface <code>title</code> and <code>detail</code> verbatim; <code>type</code> is shown as a "More info" link.</p>
+  </div>
+  <div class="req must">
+    <div class="head"><span class="id-tag">FR-INT-03</span><div class="meta"><span class="moscow must">MUST</span></div></div>
+    <div class="title">OpenAPI spec drives client codegen</div>
+    <p>The runtime MUST publish its OpenAPI spec at <code>/openapi.json</code>. The console's API client MUST be generated from this spec — no hand-written fetch wrappers.</p>
+  </div>
+  <div class="req should">
+    <div class="head"><span class="id-tag">FR-INT-04</span><div class="meta"><span class="moscow should">SHOULD</span></div></div>
+    <div class="title">Bundle separately from runtime</div>
+    <p>The console SHOULD ship as a separate container image. Operators who don't deploy the UI MUST be able to skip it.</p>
+  </div>
+</section>
+
+<!-- ===== EXCLUDED ===== -->
+<section id="exclude">
+  <h2><span class="num">§ 14</span>Excluded · <code>EX-NN</code> <span class="badge">won't ship in v1.0</span></h2>
+
+  <div class="req">
+    <div class="head"><span class="id-tag">EX-01</span><div class="meta"><span class="moscow wont">WON'T</span><span class="tag">DECISION-R3</span><span class="tag">DEBATE</span></div></div>
+    <div class="title">Runtime prompt editing</div>
+    <p>The console MUST NOT support editing prompts at runtime. This is a deliberate exclusion in service of the auditability principle (DECISION-R3). The hotfix lane (PLAN-§7) is the supported alternative.</p>
+  </div>
+  <div class="req">
+    <div class="head"><span class="id-tag">EX-02</span><div class="meta"><span class="moscow wont">WON'T</span></div></div>
+    <div class="title">Trace browser inside the console</div>
+    <p>Full trace span trees, token usage charts, latency dashboards — these live in Langfuse. The console deep-links instead of duplicating.</p>
+  </div>
+  <div class="req">
+    <div class="head"><span class="id-tag">EX-03</span><div class="meta"><span class="moscow wont">WON'T</span></div></div>
+    <div class="title">Eval runner UI</div>
+    <p>Eval is Promptfoo CLI in CI. v1.0 ships no UI for evals.</p>
+  </div>
+  <div class="req">
+    <div class="head"><span class="id-tag">EX-04</span><div class="meta"><span class="moscow wont">WON'T</span></div></div>
+    <div class="title">End-user chat surface</div>
+    <p>The end-user agent chat lives in the use-case service's own HTTP/MCP, not here.</p>
+  </div>
+  <div class="req">
+    <div class="head"><span class="id-tag">EX-05</span><div class="meta"><span class="moscow wont">WON'T</span></div></div>
+    <div class="title">Real-time event stream UI</div>
+    <p>Live event tailing is Langfuse's job. The console reads via REST polling.</p>
+  </div>
+</section>
+
+<!-- ===== TRACEABILITY ===== -->
+<section id="trace">
+  <h2><span class="num">§ 15</span>Traceability matrix</h2>
+  <p class="lede">Maps every requirement to its source artefact and the phase / iteration that delivers it.</p>
+
+  <table>
+    <thead><tr><th>Req ID</th><th>Source</th><th>Phase</th><th>Iter</th><th>Tested by</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-IA-01..04</td><td>ADMIN §2, §9</td><td>P4</td><td>4a</td><td>Playwright smoke + a11y</td></tr>
+      <tr><td class="id">FR-AUTH-01..04</td><td>DECISION-R6, PLAN-§9, ADMIN-§5</td><td>P3 + P4</td><td>4a</td><td>OIDC integration test + scope fuzz</td></tr>
+      <tr><td class="id">FR-PACK-01..04</td><td>ADMIN-§3.2, PLAN-§7</td><td>P4</td><td>4a / 4c</td><td>Playwright + API contract test</td></tr>
+      <tr><td class="id">FR-TOOL-01..04</td><td>ADMIN-§3.3</td><td>P4</td><td>4b</td><td>Schema-form test + dry-run integration test</td></tr>
+      <tr><td class="id">FR-KB-01..04</td><td>ADMIN-§3.4</td><td>P4</td><td>4c</td><td>Upload + reindex E2E test</td></tr>
+      <tr><td class="id">FR-TRAIL-01..04</td><td>ADMIN-§3.5, DECISION-R5</td><td>P4</td><td>4c</td><td>Audit fixture data + virtualisation perf test</td></tr>
+      <tr><td class="id">FR-LLM-01..02</td><td>ADMIN-§3.6, DECISION-R4</td><td>P4</td><td>4a</td><td>Read-only check + override clear-on-logout test</td></tr>
+      <tr><td class="id">FR-ADM-01..03</td><td>ADMIN-§3.8</td><td>P4</td><td>4c</td><td>Audit log latency benchmark</td></tr>
+      <tr><td class="id">NFR-PERF-01..02</td><td>ADMIN-§7</td><td>P4 + P5</td><td>4c</td><td>Lighthouse CI + image size in CI</td></tr>
+      <tr><td class="id">NFR-A11Y-01</td><td>ADMIN-§12</td><td>P4</td><td>4c</td><td>Lighthouse a11y; manual screen-reader pass</td></tr>
+      <tr><td class="id">NFR-SEC-01..04</td><td>PLAN-§14, security review</td><td>P4 + P6</td><td>4c + harden</td><td>Security review · pen test</td></tr>
+      <tr><td class="id">NFR-THM-01..02</td><td>ADMIN-§6</td><td>P4</td><td>4a</td><td>Build-time hex-literal lint rule</td></tr>
+      <tr><td class="id">FR-INT-01..04</td><td>ADMIN-§4</td><td>P3 + P4</td><td>4a</td><td>OpenAPI spec validity test + codegen step</td></tr>
+      <tr><td class="id">EX-01..05</td><td>DECISION-R3, ADMIN-§0</td><td>—</td><td>—</td><td>Negative test: route must not exist</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== STATS ===== -->
+<section>
+  <h2><span class="num">§ 16</span>Statistics</h2>
+  <div class="grid">
+    <div class="card">
+      <h4>Total requirements</h4>
+      <p style="font-size:24px;color:var(--accent);margin:4px 0">≈ 50</p>
+      <p>Across 8 functional + 6 non-functional categories</p>
+    </div>
+    <div class="card">
+      <h4>MUST</h4>
+      <p style="font-size:24px;color:var(--bad);margin:4px 0">≈ 32</p>
+      <p>Block phase gate; required for v1.0</p>
+    </div>
+    <div class="card">
+      <h4>SHOULD</h4>
+      <p style="font-size:24px;color:var(--warn);margin:4px 0">≈ 12</p>
+      <p>Strong preference; document if dropped</p>
+    </div>
+    <div class="card">
+      <h4>MAY / WON'T</h4>
+      <p style="font-size:24px;color:var(--good);margin:4px 0">≈ 6</p>
+      <p>Optional or explicitly deferred</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  v1 · 2026-05-22 · <code>office/project-agi/CONSOLE_REQUIREMENTS.html</code> · Companions: <code>ADMIN_CONSOLE.md</code> · <code>EXECUTION_PLAN.html</code> · <code>PLAN.html</code> · <code>DESIGN.html</code>
+</div>
+
+</div>
+</body>
+</html>

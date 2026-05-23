@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>project-agi — orchestrator research</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#11151a; --panel-2:#161b22; --panel-3:#1c232c;
+    --ink:#e6edf3; --ink-muted:#9aa6b2; --ink-dim:#6b7684;
+    --line:#2a313a; --line-soft:#1f262e;
+    --accent:#4f9cf9; --accent-2:#7fc4ff;
+    --good:#3ecf8e; --warn:#f5b14d; --bad:#ff6b6b; --info:#a78bfa;
+    --code-bg:#0f1318;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f5f7fa; --panel:#fff; --panel-2:#f0f3f7; --panel-3:#e6ebf1;
+      --ink:#0f1419; --ink-muted:#475569; --ink-dim:#94a3b8;
+      --line:#dbe1e8; --line-soft:#e9edf2;
+      --accent:#1f6feb; --accent-2:#0a5bd4;
+      --good:#1a7f37; --warn:#bf8700; --bad:#cf222e; --info:#7c3aed;
+      --code-bg:#f1f4f8;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .page{max-width:1200px;margin:0 auto;padding:32px 24px 96px}
+  header.hero{padding:32px 32px 28px;background:radial-gradient(circle at top right,rgba(79,156,249,.08),transparent 60%),var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:28px}
+  header.hero h1{margin:0 0 8px;font-size:32px;letter-spacing:-0.02em}
+  header.hero .sub{margin:0 0 18px;color:var(--ink-muted);font-size:15px;max-width:80ch}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{display:inline-flex;align-items:center;padding:5px 11px;font-size:12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-muted);font-weight:500}
+  .pill.accent{background:rgba(79,156,249,.12);color:var(--accent);border-color:rgba(79,156,249,.35)}
+  .pill.good{background:rgba(62,207,142,.12);color:var(--good);border-color:rgba(62,207,142,.35)}
+  .pill.warn{background:rgba(245,177,77,.12);color:var(--warn);border-color:rgba(245,177,77,.35)}
+  .pill.info{background:rgba(167,139,250,.14);color:var(--info);border-color:rgba(167,139,250,.4)}
+  nav.toc{position:sticky;top:0;background:var(--bg);padding:12px 0;border-bottom:1px solid var(--line);margin:-8px 0 24px;display:flex;flex-wrap:wrap;gap:6px;z-index:5}
+  nav.toc a{font-size:13px;padding:6px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink-muted)}
+  nav.toc a:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;margin:0 0 22px}
+  section > h2{margin:0 0 4px;font-size:22px;letter-spacing:-0.01em;display:flex;align-items:baseline;gap:10px}
+  section > h2 .num{font-size:13px;color:var(--ink-dim);font-weight:500}
+  section > .lede{color:var(--ink-muted);margin:0 0 18px;font-size:14.5px;max-width:78ch}
+  h3{margin:24px 0 10px;font-size:14px;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+  h4{margin:14px 0 6px;font-size:14.5px}
+  ul,ol{padding-left:20px;margin:8px 0}
+  li{margin:4px 0}
+  code{background:var(--code-bg);border:1px solid var(--line-soft);padding:1px 6px;border-radius:5px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre{background:var(--code-bg);border:1px solid var(--line-soft);padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{color:var(--ink-muted);font-weight:600;background:var(--panel-2);font-size:11.5px;text-transform:uppercase;letter-spacing:0.07em}
+  tr:last-child td{border-bottom:none}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:14px 0}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px;font-size:14px}
+  .card p{margin:0;color:var(--ink-muted);font-size:13.5px}
+  .badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:10.5px;font-weight:600;letter-spacing:0.04em;vertical-align:middle}
+  .badge.good{background:rgba(62,207,142,.16);color:var(--good)}
+  .badge.warn{background:rgba(245,177,77,.16);color:var(--warn)}
+  .badge.bad{background:rgba(255,107,107,.16);color:var(--bad)}
+  .badge.info{background:rgba(167,139,250,.16);color:var(--info)}
+  .badge.accent{background:rgba(79,156,249,.16);color:var(--accent)}
+  .quote{border-left:3px solid var(--accent);padding:8px 16px;color:var(--ink-muted);margin:12px 0;font-style:italic;background:var(--panel-2);border-radius:0 8px 8px 0}
+  .verdict{background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:8px;padding:16px 20px;margin:14px 0}
+  .verdict strong{color:var(--good);font-size:13.5px;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em}
+  .watch{background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:14px 18px;margin:10px 0}
+  .watch h4{margin:0 0 6px;color:var(--warn);font-size:13.5px;text-transform:uppercase;letter-spacing:0.06em}
+  .watch p{margin:0 0 6px;font-size:13.5px}
+  .watch .signal{color:var(--ink-muted);font-size:12.5px;margin:6px 0 0}
+  .footer{color:var(--ink-muted);font-size:12.5px;text-align:center;margin-top:32px}
+  .svg-label{font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink)}
+  .svg-label-muted{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink-muted)}
+  .svg-label-bold{font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink)}
+  .figure{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .figure svg{width:100%;height:auto;display:block}
+  .figure .cap{margin-top:10px;color:var(--ink-muted);font-size:13px;text-align:center;font-style:italic}
+  @media (max-width:720px){section{padding:18px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>orchestrator research</h1>
+  <p class="sub">Why <code>plain async def</code> is the default, <code>langgraph</code> + <code>pydantic_ai</code> ship as blessed-but-optional adapters, and a <strong>native built-in orchestrator</strong> now lives in-tree (v2 override of the initial "don't build" verdict). Verticals-agnostic — telco, banking, retail, healthcare, energy, fleet, education, public sector.</p>
+  <div class="pill-row">
+    <span class="pill accent">v2 · 2026-05-22 (native added)</span>
+    <span class="pill good">Drove decision R8 + R8.1</span>
+    <span class="pill warn">4 watch-conditions · quarterly review</span>
+    <span class="pill info">10-option survey · build-vs-adopt</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#constraints">Constraints</a>
+  <a href="#langgraph">LangGraph deep look</a>
+  <a href="#alternatives">Alternatives</a>
+  <a href="#build">Build new?</a>
+  <a href="#recommendation">Recommendation</a>
+  <a href="#tree">Choice tree</a>
+  <a href="#watch">Watch-conditions</a>
+  <a href="#code">In code</a>
+  <a href="#verticals">Verticals</a>
+  <a href="#sources">Sources</a>
+</nav>
+
+<!-- ============ CONSTRAINTS ============ -->
+<section id="constraints">
+  <h2><span class="num">§ 1</span>Constraints that bound the choice</h2>
+  <p class="lede">project-agi is vertical-agnostic OSS. The orchestrator choice has to survive contact with use cases we haven't imagined yet — care, claims, fraud, fleet, banking back-office, retail returns, energy meter-read explainers, healthcare triage, education tutor flows, anything. Seven constraints stay constant across verticals:</p>
+
+  <ol>
+    <li><strong>Library-first SDK.</strong> <code>agi-sdk</code> is a <code>pip install</code>. It cannot impose an orchestration framework on importers — orchestrators must be opt-in.</li>
+    <li><strong>Multi-tenant via YAML packs.</strong> Orchestrator choice can vary per-pack. A pack author who hates graphs stays on plain async.</li>
+    <li><strong>MCP-only tools.</strong> Whatever orchestrator we pick, it must compose cleanly with the official MCP Python SDK.</li>
+    <li><strong>OpenLLMetry auto-instrumentation.</strong> Traces must carry <code>bm.pack</code>, <code>bm.use_case</code>, <code>bm.tenant_id</code> baggage. Any orchestrator that bypasses OTel is disqualified.</li>
+    <li><strong>LiteLLM library mode.</strong> Model calls happen in-process; no central model gateway. The orchestrator must not insist on its own provider abstraction.</li>
+    <li><strong>Retrofit, don't greenfield.</strong> Care-intelligence (one early consumer) is already on LangGraph. A choice that forces a port is paying for nothing.</li>
+    <li><strong>Framework-gravity discipline.</strong> If we bless exactly one orchestrator, that one silently becomes The Way. Discipline says we either bless zero or bless multiple.</li>
+  </ol>
+</section>
+
+<!-- ============ LANGGRAPH ============ -->
+<section id="langgraph">
+  <h2><span class="num">§ 2</span>LangGraph deep look</h2>
+
+  <h3>Current state (May 2026)</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Latest version</td><td><strong>1.3.2</strong> (May 2026); 1.0 GA was October 2025</td></tr>
+      <tr><td>Recent change</td><td>1.2 (May 11 2026) — content-block-aware streaming, improved <code>interrupt()</code> semantics</td></tr>
+      <tr><td>License</td><td><span class="badge good">MIT</span> for <code>langgraph</code>, <code>langchain-core</code>, integrations</td></tr>
+      <tr><td>Commercial line</td><td><span class="badge warn">Elastic License 2.0</span> for <code>langgraph-api</code> (the server runtime behind LangGraph Platform) — commercial key required for production self-hosting</td></tr>
+      <tr><td>Governance</td><td>LangChain, Inc. (Series A in 2024)</td></tr>
+      <tr><td>Production users</td><td>Uber, LinkedIn, Klarna</td></tr>
+      <tr><td>Release cadence</td><td>Majors every 6–12 months, minors every 1–2 months</td></tr>
+      <tr><td>Maturity</td><td>Stable runtime, <strong>commercial gravity</strong> beyond the MIT line</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What it gives us beyond <code>async def</code></h3>
+  <table>
+    <thead><tr><th>Primitive</th><th>What it is</th><th>Where it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Checkpointing</td><td>Persists graph state per node execution; in-memory / SQLite / Postgres backends</td><td>Multi-day workflows, crash recovery</td></tr>
+      <tr><td><code>interrupt()</code> / HITL</td><td>Pause-and-resume primitive with durable state</td><td>Anywhere a human approves a side-effect</td></tr>
+      <tr><td>Conditional edges &amp; subgraphs</td><td>Explicit branching, fan-out/fan-in, nested graphs</td><td>Complex flows beyond a single tool loop</td></tr>
+      <tr><td>State reducers</td><td>Append/replace/merge semantics on shared state</td><td>Multi-agent state sharing without hand-rolled locking</td></tr>
+      <tr><td>Streaming integration</td><td>Token, message, state-delta, event streams with consistent semantics</td><td>UX requirements for live updates</td></tr>
+      <tr><td>MCP integration</td><td>Native via <code>langchain-mcp-adapters</code> (<code>MultiServerMCPClient</code>)</td><td>Exactly the multi-server shape we want</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Real downsides</h3>
+  <table>
+    <thead><tr><th>Concern</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>LangChain type coupling</td><td><code>langchain-core</code> types leak in (<code>BaseMessage</code>, <code>HumanMessage</code>); even avoiding <code>langchain</code> proper, nodes end up speaking LC's message vocabulary</td></tr>
+      <tr><td>Learning curve</td><td>The graph mental model (nodes/edges/immutable state/reducers) is a non-trivial concept tax vs plain <code>async def</code></td></tr>
+      <tr><td>Debugging</td><td>Stack traces inside graph execution are noisy; you debug via LangSmith/Langfuse traces more than pdb</td></tr>
+      <tr><td>Runtime overhead</td><td>A <code>StateGraph</code> with checkpointing has noticeable per-step cost vs raw async; fine at agent-call scale, not at hot-path scale</td></tr>
+      <tr><td>API stability</td><td>1.0 promised "zero breaking changes," but ~6 minors per year means real motion; v0 → v1 migration was significant</td></tr>
+      <tr><td>Lock-in shape</td><td>Type lock-in (LC message types) + commercial-runtime gravity (LangGraph Platform for HITL/durability at scale)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Composition with our stack</h3>
+  <table>
+    <thead><tr><th>Stack piece</th><th>Composition with LangGraph</th></tr></thead>
+    <tbody>
+      <tr><td>LiteLLM</td><td><span class="badge good">✓</span> Works fine — LangGraph nodes call <code>litellm.acompletion</code> directly; no need for LC chat-model wrappers</td></tr>
+      <tr><td>MCP Python SDK</td><td><span class="badge good">✓</span> Via <code>langchain-mcp-adapters</code> — adds a dependency layer; we could write a thin shim ourselves instead</td></tr>
+      <tr><td>OpenLLMetry</td><td><span class="badge good">✓</span> Auto-instruments LangGraph — exactly what we want</td></tr>
+      <tr><td>YAML packs / <code>X-Pack</code></td><td><span class="badge info">⊝</span> Orthogonal — LangGraph doesn't object to multi-tenancy; we inject pack-scoped state. No friction, no help.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ ALTERNATIVES ============ -->
+<section id="alternatives">
+  <h2><span class="num">§ 3</span>Alternatives surveyed</h2>
+  <p class="lede">10 options. Most don't fit. Two do — <code>plain async</code> as the default and <code>pydantic_ai</code> as a second blessed option alongside <code>langgraph</code>.</p>
+
+  <table>
+    <thead><tr><th>Option</th><th>Pitch</th><th>License</th><th>Maturity</th><th>Fit</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Plain <code>async def</code> + state dict</strong></td>
+        <td>Just write Python. State is a Pydantic model.</td>
+        <td>n/a</td>
+        <td>Battle-tested</td>
+        <td><span class="badge good">Best library fit</span> Zero gravity. Default in v0 docs.</td>
+      </tr>
+      <tr>
+        <td>LlamaIndex Workflows 1.0</td>
+        <td>Event-driven step pattern; steps emit events that trigger other steps</td>
+        <td>MIT</td>
+        <td>1.0 stable; <code>llama-deploy</code> GA 2026</td>
+        <td>Decent if we want structure. Pulls in a tangential ecosystem.</td>
+      </tr>
+      <tr>
+        <td>CrewAI 1.10</td>
+        <td>Role-based multi-agent ("crew" of agents with roles)</td>
+        <td>MIT</td>
+        <td>1.x, large community</td>
+        <td><span class="badge warn">Wrong shape</span> Most use cases are single-agent + tool loop, not multi-actor.</td>
+      </tr>
+      <tr>
+        <td>Microsoft AutoGen 0.7</td>
+        <td>Conversation-pattern multi-agent</td>
+        <td>MIT (Microsoft)</td>
+        <td><span class="badge bad">In maintenance</span></td>
+        <td><span class="badge bad">Avoid</span> Succeeded by Microsoft Agent Framework.</td>
+      </tr>
+      <tr>
+        <td><strong>Pydantic AI v1</strong></td>
+        <td>Type-first agents; Pydantic-native; FastAPI-style ergonomics</td>
+        <td>MIT</td>
+        <td>v1 stable Sept 2025</td>
+        <td><span class="badge good">Strong fit</span> Pydantic-native matches our <code>sdk.config</code>.</td>
+      </tr>
+      <tr>
+        <td>Burr (ex-DAGWorks)</td>
+        <td>Lightweight state machine library, built-in tracing UI</td>
+        <td>Apache 2.0</td>
+        <td>0.26.x, niche but real</td>
+        <td>Good fit. Survival bet on a smaller community.</td>
+      </tr>
+      <tr>
+        <td>DSPy 2.x (Stanford)</td>
+        <td>Compile signatures+metrics into optimized prompts</td>
+        <td>MIT</td>
+        <td>160k monthly downloads</td>
+        <td><span class="badge info">Different category</span> Prompt-optimization, not orchestration. Complementary, not competing.</td>
+      </tr>
+      <tr>
+        <td>Strands Agents 1.0 (AWS)</td>
+        <td>Model-driven agent SDK; production at AWS (Q Developer, Glue)</td>
+        <td>Apache 2.0</td>
+        <td>1.0 GA</td>
+        <td><span class="badge good">Strong on licensing</span> Library-first, MCP-native, OTel built-in. Apache-2.0 end-to-end.</td>
+      </tr>
+      <tr>
+        <td>OpenAI Agents SDK</td>
+        <td>Lightweight multi-agent loop; provider-agnostic via Responses API or LiteLLM</td>
+        <td>MIT</td>
+        <td>0.17.x, March 2025</td>
+        <td>OK; cleaner alternatives exist.</td>
+      </tr>
+      <tr>
+        <td>smolagents (HF)</td>
+        <td>Minimalist ~1000-LOC framework; code-agent paradigm</td>
+        <td>Apache 2.0</td>
+        <td>26k stars, active</td>
+        <td><span class="badge warn">Wrong shape</span> Code-execution agents (LLM writes Python). Wrong paradigm for tool-calling enterprise flows.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ BUILD ============ -->
+<section id="build">
+  <h2><span class="num">§ 4</span>"Build something new" — what would that look like?</h2>
+
+  <p>A thin in-house orchestrator on top of LiteLLM + MCP would be roughly:</p>
+  <ul>
+    <li>A <code>Run</code> object holding <code>state: PydanticModel</code>, <code>messages: list</code>, <code>pack: Pack</code>, <code>correlation_id</code>, <code>step: int</code>.</li>
+    <li>A <code>step()</code> coroutine that calls <code>litellm.acompletion</code>, dispatches MCP tool calls via the official SDK, and appends to state.</li>
+    <li>A <code>checkpoint(run)</code> hook (pluggable: file / Mongo / Postgres) called after each step.</li>
+    <li>A <code>pause(run, reason)</code> / <code>resume(run_id)</code> pair for HITL — durable state required.</li>
+    <li>Streaming = forwarding LiteLLM's async generator with span enrichment.</li>
+  </ul>
+
+  <div class="grid">
+    <div class="card">
+      <h4 style="color:var(--bad)">Cost</h4>
+      <p>Realistic size: <strong>600–1200 LOC including tests</strong>. Every LangGraph improvement (streaming, checkpointing, HITL semantics) is re-built or skipped. We own bug fixes forever. We support our own backends. Maintenance every quarter forever.</p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--good)">Gain</h4>
+      <p>No LC type leakage. Apache-2.0 end-to-end. Total alignment with <code>sdk.config</code>/<code>sdk.trail</code>/<code>sdk.serve</code>. Smaller dep footprint. Easier to keep OpenLLMetry attribution exactly the way we need.</p>
+    </div>
+  </div>
+
+  <div class="verdict" style="border-left-color:var(--warn)">
+    <strong style="color:var(--warn)">Initial verdict (v1) · Don't build</strong>
+    The composition story (LangGraph + Pydantic-AI both compose cleanly with our stack) is strong enough that owning 600–1200 LOC of orchestration forever is debt with no customer value.
+  </div>
+  <div class="verdict">
+    <strong>Override (v2) · Built anyway as a third option</strong>
+    Project-owner override: build a native orchestrator alongside (not replacing) the two blessed externals. Reasoning: (a) hedges <strong>watch-condition W-01</strong> (LangGraph commercial moat) without requiring a port; (b) gives users an Apache-2.0, no-LC-types, no-Pydantic-AI-tax path for multi-step tool loops; (c) actual size came in at <strong>1026 LOC total</strong> (625 orchestrator + 401 tests) — at the upper end of the predicted range but bounded.
+  </div>
+
+  <h3>The native orchestrator (in-tree)</h3>
+  <table>
+    <thead><tr><th>Module</th><th>What it provides</th></tr></thead>
+    <tbody>
+      <tr><td><code>agi.orchestrators.native</code></td><td>Built-in, always available. No optional extra.</td></tr>
+      <tr><td><code>Run</code></td><td>Pydantic model: <code>run_id</code>, <code>correlation_id</code>, <code>pack_slug</code>, <code>use_case_slug/_version</code>, <code>tenant_id</code>, <code>session_id</code>, <code>status</code>, <code>step</code>, <code>max_steps</code>, <code>messages</code>, <code>state</code>, <code>result</code>, <code>error</code>, <code>created_at</code>/<code>updated_at</code>. Reconstructable from any checkpoint.</td></tr>
+      <tr><td><code>Orchestrator</code></td><td><code>step()</code> (one model call + tool dispatch), <code>run_until_done()</code> (loop until terminal), <code>pause(reason)</code> / <code>resume(run_id)</code> for HITL, <code>stream()</code> for live token streaming.</td></tr>
+      <tr><td><code>CheckpointStore</code></td><td>Protocol: <code>save</code> / <code>load</code> / <code>delete</code>. Built-ins: <code>MemoryCheckpointStore</code>, <code>FileJsonlCheckpointStore</code>. Stubs for <code>MongoCheckpointStore</code>, <code>PostgresCheckpointStore</code> (P3 wiring).</td></tr>
+      <tr><td><code>set_run_baggage(run)</code></td><td>Returns OTel baggage dict — same shape as the langgraph / pydantic_ai adapters.</td></tr>
+      <tr><td><code>resolve_tools(pack, available)</code></td><td>Filters OpenAI tool-schema dicts through pack <code>allow</code> / <code>deny</code> lists.</td></tr>
+      <tr><td><code>run_use_case(...)</code></td><td>End-to-end helper: builds a Run, drives to completion, returns it. The 20-line use-case path.</td></tr>
+      <tr><td>Tests</td><td>13 unit tests covering: baggage shape, allow/deny lists, text completion, tool dispatch, allow-list rejection, step budget, pause/resume roundtrip, missing/non-paused resume, JSONL checkpoint persistence, trail sink writes, end-to-end helper, streaming.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Positioning of the four options</h3>
+  <table>
+    <thead><tr><th>Path</th><th>When to pick</th><th>Dep cost</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Plain <code>async def</code></strong></td><td>Single-turn or trivial multi-step. Maximum freedom.</td><td>Zero</td></tr>
+      <tr><td><strong><code>orchestrators.native</code></strong> <span class="badge good">NEW</span></td><td>Multi-step tool loops, HITL, checkpointing, streaming — without LC types or a heavyweight framework.</td><td>Already in <code>agi-sdk</code></td></tr>
+      <tr><td><strong><code>orchestrators.langgraph</code></strong></td><td>Full graph state-machine, subgraphs, the LC ecosystem.</td><td><code>pip install agi-sdk[langgraph]</code></td></tr>
+      <tr><td><strong><code>orchestrators.pydantic_ai</code></strong></td><td>Type-first, Pydantic-native, FastAPI-style ergonomics.</td><td><code>pip install agi-sdk[pydantic-ai]</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ RECOMMENDATION ============ -->
+<section id="recommendation">
+  <h2><span class="num">§ 5</span>Recommendation — adopted as decision R8</h2>
+
+  <div class="quote">Plain <code>async def</code> is the default for new use cases. Two adapters in <code>sdk.orchestrators</code> bless one alternative each.</div>
+
+  <h3>Concretely</h3>
+  <ul>
+    <li><code>sdk.{models, mcp, prompts, rag, config, serve, trail}</code> know nothing about orchestration. They are the primitives.</li>
+    <li>Optional <code>sdk.orchestrators</code> package ships <strong>two</strong> thin adapters:
+      <ul>
+        <li><code>langgraph</code> — when you need durability, checkpointing, HITL, complex branching, streaming. ~150 LOC.</li>
+        <li><code>pydantic_ai</code> — when you want type-first ergonomics, Pydantic-native state, no LC types. ~150 LOC.</li>
+      </ul>
+    </li>
+    <li>Adapters do only two things: (a) set OpenLLMetry baggage on the right spans; (b) resolve MCP tools from the pack's allow-list.</li>
+    <li>Adapters are <strong>optional install extras</strong>: <code>pip install agi-sdk[langgraph]</code>, <code>pip install agi-sdk[pydantic-ai]</code>.</li>
+    <li>Plain async stays the default in docs, starter packs, and the getting-started guide.</li>
+  </ul>
+
+  <h3>Why this beats the alternatives for <em>this project</em></h3>
+  <ol>
+    <li><strong>Multi-tenant via packs.</strong> Orchestrator choice is per-pack, not global. A pack author across any vertical picks what fits.</li>
+    <li><strong>Embeddable library.</strong> SDK does not impose LC types on importers — LangGraph stays optional, not transitive.</li>
+    <li><strong>OpenLLMetry-instrumented.</strong> Both LangGraph and Pydantic-AI are auto-instrumented, so the trace contract holds.</li>
+    <li><strong>MCP-only tools.</strong> Existing adapters handle both paths; nothing to invent.</li>
+    <li><strong>Retrofit-don't-greenfield.</strong> Care-intelligence already uses LangGraph — retrofit doesn't fight the existing platform layer.</li>
+    <li><strong>Framework-gravity discipline.</strong> Two blessed options + plain async default makes "library-first" credible. One blessed option would silently become The Way.</li>
+  </ol>
+</section>
+
+<!-- ============ CHOICE TREE ============ -->
+<section id="tree">
+  <h2><span class="num">§ 6</span>Choice tree — pick by use-case shape</h2>
+  <p class="lede">Choose by shape, never by vertical. Same shape → same orchestrator across industries.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--ink-muted)" />
+        </marker>
+      </defs>
+
+      <rect x="350" y="20" width="200" height="60" rx="10" fill="var(--panel-2)" stroke="var(--accent)"/>
+      <text x="450" y="46" text-anchor="middle" class="svg-label-bold">New use case</text>
+      <text x="450" y="64" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">What does it need?</text>
+
+      <path d="M 450 80 L 450 110" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <rect x="320" y="115" width="260" height="50" rx="10" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="450" y="138" text-anchor="middle" class="svg-label">Durable multi-step state?</text>
+      <text x="450" y="155" text-anchor="middle" class="svg-label-muted" style="font-size:11px">checkpointing · HITL · long-running</text>
+
+      <path d="M 380 165 L 200 195" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <text x="280" y="180" class="svg-label-muted" style="font-size:10px;font-weight:600">YES</text>
+
+      <path d="M 520 165 L 700 195" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <text x="615" y="180" class="svg-label-muted" style="font-size:10px;font-weight:600">NO</text>
+
+      <rect x="50" y="200" width="300" height="50" rx="10" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="200" y="223" text-anchor="middle" class="svg-label">Need type-first ergonomics?</text>
+      <text x="200" y="240" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Pydantic-native state</text>
+
+      <rect x="550" y="200" width="300" height="50" rx="10" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="700" y="223" text-anchor="middle" class="svg-label">Single-turn or simple loop?</text>
+      <text x="700" y="240" text-anchor="middle" class="svg-label-muted" style="font-size:11px">no special framework needed</text>
+
+      <path d="M 150 250 L 80 295" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <text x="100" y="280" class="svg-label-muted" style="font-size:10px;font-weight:600">YES</text>
+      <path d="M 250 250 L 320 295" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <text x="305" y="280" class="svg-label-muted" style="font-size:10px;font-weight:600">NO</text>
+
+      <rect x="20" y="300" width="180" height="100" rx="10" fill="rgba(167,139,250,.12)" stroke="var(--info)" stroke-width="2"/>
+      <text x="110" y="328" text-anchor="middle" class="svg-label-bold" fill="var(--info)">pydantic_ai</text>
+      <text x="110" y="348" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Type-first, MIT</text>
+      <text x="110" y="363" text-anchor="middle" class="svg-label-muted" style="font-size:11px">No LC types</text>
+      <text x="110" y="380" text-anchor="middle" class="svg-label-muted" style="font-size:10px;font-weight:600;letter-spacing:0.06em" fill="var(--info)">BLESSED · 150 LOC ADAPTER</text>
+
+      <rect x="220" y="300" width="180" height="100" rx="10" fill="rgba(79,156,249,.12)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="310" y="328" text-anchor="middle" class="svg-label-bold" fill="var(--accent)">langgraph</text>
+      <text x="310" y="348" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Checkpoint · HITL</text>
+      <text x="310" y="363" text-anchor="middle" class="svg-label-muted" style="font-size:11px">MIT · watch Elastic-2.0</text>
+      <text x="310" y="380" text-anchor="middle" class="svg-label-muted" style="font-size:10px;font-weight:600;letter-spacing:0.06em" fill="var(--accent)">BLESSED · 150 LOC ADAPTER</text>
+
+      <rect x="610" y="300" width="180" height="100" rx="10" fill="rgba(62,207,142,.12)" stroke="var(--good)" stroke-width="2"/>
+      <text x="700" y="328" text-anchor="middle" class="svg-label-bold" fill="var(--good)">plain async def</text>
+      <text x="700" y="348" text-anchor="middle" class="svg-label-muted" style="font-size:11px">No framework</text>
+      <text x="700" y="363" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Zero gravity</text>
+      <text x="700" y="380" text-anchor="middle" class="svg-label-muted" style="font-size:10px;font-weight:600;letter-spacing:0.06em" fill="var(--good)">DEFAULT · 0 LOC</text>
+
+      <text x="450" y="440" text-anchor="middle" class="svg-label-bold">Two blessed options keeps "library-first" credible.</text>
+      <text x="450" y="460" text-anchor="middle" class="svg-label-muted">One blessed option silently becomes The Way. Adapters set OTel baggage and resolve MCP tools — nothing more.</text>
+    </svg>
+    <div class="cap">Figure 1 · Choice tree — pick by use-case shape, not by framework loyalty</div>
+  </div>
+</section>
+
+<!-- ============ WATCH ============ -->
+<section id="watch">
+  <h2><span class="num">§ 7</span>Watch-conditions — when this flips</h2>
+  <p class="lede">Four triggers re-open the question. The tech lead reviews them quarterly.</p>
+
+  <div class="watch">
+    <h4>W-01 · LangChain Inc. tightens the commercial moat</h4>
+    <p class="signal"><strong>Signal:</strong> Checkpointing primitives, HITL semantics, or durability features move from <code>langgraph</code> (MIT) to <code>langgraph-api</code> or <code>langgraph-platform</code> (Elastic License 2.0).</p>
+    <p><strong>Action:</strong> Demote <code>langgraph</code> from "blessed" to "supported"; promote <code>pydantic_ai</code> or <code>strands</code> to second blessed slot. Document the migration path.</p>
+  </div>
+
+  <div class="watch">
+    <h4>W-02 · Use-case set narrows to durable-workflow pattern</h4>
+    <p class="signal"><strong>Signal:</strong> ≥ 80% of community packs end up being long-running workflows with retries, HITL, and durable state.</p>
+    <p><strong>Action:</strong> Evaluate a workflow engine outside the LLM-framework world — Temporal, Inngest, Hatchet. Plain async stays at the LLM call sites; durability externalises to the workflow engine.</p>
+  </div>
+
+  <div class="watch">
+    <h4>W-03 · Use-case set stays request-scoped</h4>
+    <p class="signal"><strong>Signal:</strong> ≥ 80% of community packs are single-turn or simple multi-turn loops with no HITL/checkpointing need.</p>
+    <p><strong>Action:</strong> Drop <code>langgraph</code> blessed status; plain async + <code>pydantic_ai</code> is enough.</p>
+  </div>
+
+  <div class="watch">
+    <h4>W-04 · A clearly-superior third option appears</h4>
+    <p class="signal"><strong>Signal:</strong> A new orchestrator (or a major version of an existing one) becomes credible on all six constraints simultaneously — library, multi-tenant, MCP-native, OTel-clean, retrofit-friendly, ecosystem-stable.</p>
+    <p><strong>Action:</strong> Run this brief's structure against the new option. Bless if it wins on at least three criteria the current pair loses.</p>
+  </div>
+</section>
+
+<!-- ============ IN CODE ============ -->
+<section id="code">
+  <h2><span class="num">§ 8</span>How this lands in the codebase</h2>
+
+  <table>
+    <thead><tr><th>Artefact</th><th>Phase</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td><code>packages/agi-sdk/agi/orchestrators/__init__.py</code></td><td>P1.5</td><td>Empty re-exporter; gracefully no-ops if extras not installed</td></tr>
+      <tr><td><code>packages/agi-sdk/agi/orchestrators/langgraph.py</code></td><td>P1.5</td><td>~150-LOC adapter; sets OTel baggage, resolves MCP tools</td></tr>
+      <tr><td><code>packages/agi-sdk/agi/orchestrators/pydantic_ai.py</code></td><td>P1.5</td><td>Same shape, type-first</td></tr>
+      <tr><td><code>pyproject.toml</code> extras</td><td>P1.5</td><td><code>agi-sdk[langgraph]</code> and <code>agi-sdk[pydantic-ai]</code></td></tr>
+      <tr><td>Starter pack default</td><td>P1, P5</td><td>Plain <code>async def</code> use case in <code>packs/blank/</code></td></tr>
+      <tr><td>Decision tree doc</td><td>P5</td><td><code>docs/orchestration-choice.md</code> + Figure 1 above</td></tr>
+      <tr><td>Watch-condition review</td><td>Quarterly</td><td>Tech-lead checklist in the runbook</td></tr>
+    </tbody>
+  </table>
+
+<pre># Plain async use case (default)
+import litellm
+from agi import use_case, serve
+
+@use_case("returns_helper", version="1.0.0")
+class ReturnsHelper:
+    def __init__(self, sdk):
+        self.fast = sdk.models.binding("fast")
+    async def handle(self, request, ctx):
+        return await litellm.acompletion(**self.fast.kwargs(messages=request.messages))
+
+# LangGraph (durable, HITL)
+from agi.orchestrators.langgraph import set_pack_baggage, resolve_tools
+# build your graph, call set_pack_baggage(span_ctx, pack), resolve_tools(pack)
+
+# Pydantic-AI (type-first)
+from agi.orchestrators.pydantic_ai import set_pack_baggage, resolve_tools
+# build your agent with Pydantic-AI's API, same baggage + tool plumbing</pre>
+</section>
+
+<!-- ============ VERTICALS ============ -->
+<section id="verticals">
+  <h2><span class="num">§ 9</span>Verticals — orchestrator choice by use-case shape</h2>
+  <p class="lede">Cross-vertical examples to confirm the choice is genuinely industry-neutral. The pattern: choose by <strong>use-case shape</strong>, never by vertical.</p>
+
+  <table>
+    <thead><tr><th>Use case</th><th>Vertical</th><th>Shape</th><th>Pick</th></tr></thead>
+    <tbody>
+      <tr><td>Bill explainer</td><td>Telco, energy, broadband</td><td>Single-turn, KB lookup + render</td><td><span class="badge good">Plain async</span></td></tr>
+      <tr><td>Refund agent</td><td>Retail, telco, fintech</td><td>Multi-step with side-effect approval</td><td><span class="badge accent">LangGraph</span></td></tr>
+      <tr><td>Loan triage</td><td>Banking</td><td>Type-heavy state, no HITL</td><td><span class="badge info">Pydantic-AI</span></td></tr>
+      <tr><td>Fleet meter-read explainer</td><td>Logistics</td><td>Single-turn, RAG</td><td><span class="badge good">Plain async</span></td></tr>
+      <tr><td>Insurance claim resolver</td><td>Insurance</td><td>Long-running with retries, durable state</td><td><span class="badge accent">LangGraph</span></td></tr>
+      <tr><td>Patient pre-triage</td><td>Healthcare</td><td>Multi-turn, type-strict</td><td><span class="badge info">Pydantic-AI</span></td></tr>
+      <tr><td>Returns assistant</td><td>Retail</td><td>Simple tool loop</td><td><span class="badge good">Plain async</span></td></tr>
+      <tr><td>Tier-2 escalation</td><td>Any care vertical</td><td>Conditional branching with handoff</td><td><span class="badge accent">LangGraph</span></td></tr>
+      <tr><td>Tutor session</td><td>Education</td><td>Type-strict, no durability</td><td><span class="badge info">Pydantic-AI</span></td></tr>
+      <tr><td>Outage explainer</td><td>Energy / utilities</td><td>Single-turn, KB lookup</td><td><span class="badge good">Plain async</span></td></tr>
+      <tr><td>Eligibility explainer</td><td>Public sector</td><td>Single-turn, decision logic</td><td><span class="badge good">Plain async</span></td></tr>
+      <tr><td>KYC pre-check</td><td>Fintech</td><td>Type-heavy state</td><td><span class="badge info">Pydantic-AI</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="quote">Adding a new vertical is dropping a folder under <code>packs/</code>. Zero changes to <code>agi-sdk</code>, <code>agi-runtime</code>, or any other Band-1 / Band-2 component. The orchestrator choice belongs in the pack, not the code.</div>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section id="sources">
+  <h2><span class="num">§ 10</span>Sources (verified May 2026)</h2>
+  <ul>
+    <li>LangGraph 1.0 GA announcement · LangGraph releases 1.3.2</li>
+    <li>LangGraph MIT vs Elastic-License analysis</li>
+    <li>LangGraph release policy</li>
+    <li>LangGraph criticism / lock-in discussion</li>
+    <li><code>langchain-mcp-adapters</code> (official multi-server MCP client)</li>
+    <li>LlamaIndex Workflows 1.0</li>
+    <li>CrewAI GitHub (MIT, 1.10)</li>
+    <li>Microsoft AutoGen in maintenance / Microsoft Agent Framework successor</li>
+    <li>Pydantic AI v1 stable</li>
+    <li>Apache Burr (DAGWorks)</li>
+    <li>DSPy framework</li>
+    <li>Strands Agents 1.0 GA (Apache-2.0)</li>
+    <li>OpenAI Agents SDK (MIT)</li>
+    <li>smolagents (Hugging Face)</li>
+    <li>OpenLLMetry (Apache-2.0, Traceloop)</li>
+    <li>Langfuse + OpenLLMetry integration</li>
+  </ul>
+
+  <h3>Where this research is reflected in the project</h3>
+  <table>
+    <thead><tr><th>Document</th><th>Section</th></tr></thead>
+    <tbody>
+      <tr><td><code>RESOLVED_STACK.md</code></td><td>Decision R8</td></tr>
+      <tr><td><code>PLAN.html</code></td><td>§ 5 Orchestration</td></tr>
+      <tr><td><code>DESIGN.html</code></td><td>Figure 7 — Orchestration choice tree</td></tr>
+      <tr><td><code>EXECUTION_PLAN.html</code></td><td>Phase 1.5 (Wk 3)</td></tr>
+      <tr><td><code>ORCHESTRATOR_RESEARCH.md</code></td><td>This brief, markdown twin</td></tr>
+      <tr><td>Codebase</td><td><code>packages/agi-sdk/agi/orchestrators/</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="footer">
+  v1 · 2026-05-22 · <code>office/project-agi/ORCHESTRATOR_RESEARCH.html</code> · Companions: <code>PLAN.html</code> · <code>DESIGN.html</code> · <code>DEBATE.md</code> · <code>RESOLVED_STACK.md</code>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>project-agi — design & decisions (visual)</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#11151a; --panel-2:#161b22; --panel-3:#1c232c;
+    --ink:#e6edf3; --ink-muted:#9aa6b2; --ink-dim:#6b7684;
+    --line:#2a313a; --line-soft:#1f262e;
+    --accent:#4f9cf9; --accent-2:#7fc4ff;
+    --good:#3ecf8e; --warn:#f5b14d; --bad:#ff6b6b; --info:#a78bfa;
+    --band1:#1e3a5f; --band1-edge:#4f9cf9;
+    --band2:#3d2b1f; --band2-edge:#f5b14d;
+    --code-bg:#0f1318;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f5f7fa; --panel:#fff; --panel-2:#f0f3f7; --panel-3:#e6ebf1;
+      --ink:#0f1419; --ink-muted:#475569; --ink-dim:#94a3b8;
+      --line:#dbe1e8; --line-soft:#e9edf2;
+      --accent:#1f6feb; --accent-2:#0a5bd4;
+      --good:#1a7f37; --warn:#bf8700; --bad:#cf222e; --info:#7c3aed;
+      --band1:#e0ecfa; --band1-edge:#1f6feb;
+      --band2:#fbf0dc; --band2-edge:#bf8700;
+      --code-bg:#f1f4f8;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .page{max-width:1200px;margin:0 auto;padding:32px 24px 96px}
+
+  header.hero{padding:32px 32px 28px;background:radial-gradient(circle at top right,rgba(79,156,249,.08),transparent 60%),var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:28px}
+  header.hero h1{margin:0 0 8px;font-size:32px;letter-spacing:-0.02em}
+  header.hero .sub{margin:0 0 18px;color:var(--ink-muted);font-size:15px;max-width:80ch}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{display:inline-flex;align-items:center;padding:5px 11px;font-size:12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-muted);font-weight:500}
+  .pill.accent{background:rgba(79,156,249,.12);color:var(--accent);border-color:rgba(79,156,249,.35)}
+  .pill.good{background:rgba(62,207,142,.12);color:var(--good);border-color:rgba(62,207,142,.35)}
+  .pill.warn{background:rgba(245,177,77,.12);color:var(--warn);border-color:rgba(245,177,77,.35)}
+  .pill.info{background:rgba(167,139,250,.14);color:var(--info);border-color:rgba(167,139,250,.4)}
+
+  nav.toc{position:sticky;top:0;background:var(--bg);padding:12px 0;border-bottom:1px solid var(--line);margin:-8px 0 24px;display:flex;flex-wrap:wrap;gap:6px;z-index:5}
+  nav.toc a{font-size:13px;padding:6px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink-muted)}
+  nav.toc a:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
+
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;margin:0 0 22px}
+  section > h2{margin:0 0 4px;font-size:22px;letter-spacing:-0.01em;display:flex;align-items:baseline;gap:10px}
+  section > h2 .num{font-size:13px;color:var(--ink-dim);font-weight:500;font-variant-numeric:tabular-nums}
+  section > .lede{color:var(--ink-muted);margin:0 0 18px;font-size:14.5px;max-width:78ch}
+  h3{margin:24px 0 10px;font-size:14px;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+  h4{margin:14px 0 6px;font-size:14.5px}
+
+  ul,ol{padding-left:20px;margin:8px 0}
+  li{margin:4px 0}
+  code{background:var(--code-bg);border:1px solid var(--line-soft);padding:1px 6px;border-radius:5px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  .figure{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:18px;margin:14px 0}
+  .figure svg{width:100%;height:auto;display:block}
+  .figure .cap{margin-top:10px;color:var(--ink-muted);font-size:13px;text-align:center;font-style:italic}
+
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{color:var(--ink-muted);font-weight:600;background:var(--panel-2);font-size:11.5px;text-transform:uppercase;letter-spacing:0.07em}
+  tr:last-child td{border-bottom:none}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px;font-size:14.5px}
+  .card p{margin:0;color:var(--ink-muted);font-size:13.5px}
+  .card .kpi{font-size:22px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;margin:4px 0}
+
+  .decision-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:0.02em}
+  .decision-chip.fw{background:rgba(79,156,249,.14);color:var(--accent)}
+  .decision-chip.pf{background:rgba(245,177,77,.14);color:var(--warn)}
+  .decision-chip.both{background:rgba(62,207,142,.14);color:var(--good)}
+
+  .tl{position:relative;padding-left:24px;margin:12px 0}
+  .tl::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .tl-item{position:relative;padding:0 0 14px 14px}
+  .tl-item::before{content:'';position:absolute;left:-21px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+  .tl-item.good::before{background:var(--good)}
+  .tl-item.warn::before{background:var(--warn)}
+  .tl-item h5{margin:0 0 2px;font-size:14px}
+  .tl-item p{margin:0;color:var(--ink-muted);font-size:13px}
+
+  .footer{color:var(--ink-muted);font-size:12.5px;text-align:center;margin-top:32px}
+
+  /* SVG token helpers */
+  .svg-label{font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink)}
+  .svg-label-muted{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink-muted)}
+  .svg-label-bold{font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:var(--ink)}
+  .svg-tag{font:600 10px ui-monospace,SFMono-Regular,Menlo,monospace;fill:var(--ink-muted);letter-spacing:0.08em}
+
+  @media (max-width:720px){
+    .page{padding:18px 14px 64px}
+    section{padding:18px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>project-agi · design &amp; decisions</h1>
+  <p class="sub">A visual companion to <code>PLAN.html</code> and <code>DEBATE.md</code>. Read this first to understand <em>why</em> the stack looks the way it does, then go to PLAN.html for the phased execution.</p>
+  <div class="pill-row">
+    <span class="pill accent">v3 · 2026-05-22</span>
+    <span class="pill good">8 decisions ratified</span>
+    <span class="pill warn">3 owner-pending</span>
+    <span class="pill info">Apache-2.0 (intent)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#problem">The problem</a>
+  <a href="#bands">Two-band architecture</a>
+  <a href="#stack">Component map</a>
+  <a href="#request">Request flow</a>
+  <a href="#tenancy">Tenancy + leak</a>
+  <a href="#hotfix">Hotfix lane</a>
+  <a href="#orch">Orchestration tree</a>
+  <a href="#decisions">Decision provenance</a>
+  <a href="#trace">Telemetry vs audit</a>
+  <a href="#timeline">Phases</a>
+</nav>
+
+<!-- ==================== PROBLEM ==================== -->
+<section id="problem">
+  <h2><span class="num">§ 1</span>The problem the stack solves</h2>
+  <p class="lede">Two repos exist today; neither is the right answer on its own. <code>bluemarble-ai-framework</code> v0 is a clean library design with no production miles. <code>bm-ai-platform</code> develop has all the production miles but is gated by Comviva-internal dependencies and a "platform" framing it doesn't deserve.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--ink-muted)" />
+        </marker>
+      </defs>
+
+      <!-- Left source -->
+      <rect x="20" y="40" width="240" height="220" rx="12" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="140" y="70" text-anchor="middle" class="svg-label-bold">bluemarble-ai-framework</text>
+      <text x="140" y="88" text-anchor="middle" class="svg-tag">BRANCH · v0</text>
+      <text x="40" y="120" class="svg-label">✓ Library-first SDK design</text>
+      <text x="40" y="140" class="svg-label">✓ Roles-not-providers</text>
+      <text x="40" y="160" class="svg-label">✓ Auto-MCP-from-OpenAPI</text>
+      <text x="40" y="180" class="svg-label">✓ OpenLLMetry built-in</text>
+      <text x="40" y="200" class="svg-label" fill="var(--bad)">✗ Never deployed at a customer</text>
+      <text x="40" y="220" class="svg-label" fill="var(--bad)">✗ Internal-only repo</text>
+      <text x="40" y="240" class="svg-label" fill="var(--bad)">✗ No UI, no chart</text>
+
+      <!-- Right source -->
+      <rect x="640" y="40" width="240" height="220" rx="12" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="760" y="70" text-anchor="middle" class="svg-label-bold">bm-ai-platform</text>
+      <text x="760" y="88" text-anchor="middle" class="svg-tag">BRANCH · develop</text>
+      <text x="660" y="120" class="svg-label">✓ Production runtime + UI</text>
+      <text x="660" y="140" class="svg-label">✓ Keycloak + Helm + Mongo</text>
+      <text x="660" y="160" class="svg-label">✓ Lived deployment miles</text>
+      <text x="660" y="180" class="svg-label">✓ Multi-protocol MCP</text>
+      <text x="660" y="200" class="svg-label" fill="var(--bad)">✗ Nexus + VPN to install</text>
+      <text x="660" y="220" class="svg-label" fill="var(--bad)">✗ Proprietary, not OSS</text>
+      <text x="660" y="240" class="svg-label" fill="var(--bad)">✗ "Platform" framing trap</text>
+
+      <!-- Middle merger -->
+      <path d="M 260 150 C 340 150 360 160 410 160" stroke="var(--accent)" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+      <path d="M 640 150 C 560 150 540 160 490 160" stroke="var(--warn)" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+
+      <rect x="370" y="100" width="160" height="120" rx="12" fill="var(--band1)" stroke="var(--band1-edge)" stroke-width="2" />
+      <text x="450" y="135" text-anchor="middle" class="svg-label-bold" style="font-size:14px">project-agi</text>
+      <text x="450" y="156" text-anchor="middle" class="svg-label-muted">Scrub the internal bits.</text>
+      <text x="450" y="172" text-anchor="middle" class="svg-label-muted">Keep the design.</text>
+      <text x="450" y="188" text-anchor="middle" class="svg-label-muted">Keep the miles.</text>
+      <text x="450" y="208" text-anchor="middle" class="svg-tag" fill="var(--accent)">APACHE-2.0</text>
+
+      <!-- Bottom note -->
+      <text x="450" y="285" text-anchor="middle" class="svg-label-muted">A teammate starting an AI use case today has three bad choices.</text>
+      <text x="450" y="302" text-anchor="middle" class="svg-label-muted">project-agi is the merged, scrubbed, externally-runnable answer.</text>
+    </svg>
+    <div class="cap">Figure 1 · Why merge — neither source is the right answer on its own</div>
+  </div>
+</section>
+
+<!-- ==================== TWO BANDS ==================== -->
+<section id="bands">
+  <h2><span class="num">§ 2</span>Two-band architecture</h2>
+  <p class="lede">The single load-bearing decision of v3. The <strong>SDK is the product</strong>; the <strong>reference distribution is supported</strong>. Same repo, distinct altitude, separate release cadence. Band 2 depends on Band 1, never the reverse.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow2" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--ink-muted)" />
+        </marker>
+      </defs>
+
+      <!-- Band 1 wrapper -->
+      <rect x="30" y="30" width="840" height="220" rx="14" fill="var(--band1)" stroke="var(--band1-edge)" stroke-width="2" opacity="0.5" />
+      <text x="50" y="58" class="svg-label-bold" style="font-size:14px">BAND 1 · Product (the library)</text>
+      <text x="850" y="58" text-anchor="end" class="svg-tag" fill="var(--accent)">pip install · PyPI</text>
+
+      <!-- agi-sdk -->
+      <rect x="50" y="80" width="380" height="150" rx="10" fill="var(--panel)" stroke="var(--band1-edge)" />
+      <text x="70" y="106" class="svg-label-bold">agi-sdk</text>
+      <text x="70" y="124" class="svg-label-muted">Python library — the actual product</text>
+      <text x="70" y="150" class="svg-label" style="font-size:11.5px">sdk.models · sdk.mcp · sdk.rag</text>
+      <text x="70" y="167" class="svg-label" style="font-size:11.5px">sdk.prompts · sdk.config · sdk.serve</text>
+      <text x="70" y="184" class="svg-label" style="font-size:11.5px">sdk.trail · sdk.orchestrators.{lg, pa}</text>
+      <text x="70" y="208" class="svg-label-muted" style="font-size:11px">Traceloop.init() at boot → OpenLLMetry auto-instrument</text>
+
+      <!-- agi-core -->
+      <rect x="450" y="80" width="190" height="70" rx="10" fill="var(--panel)" stroke="var(--band1-edge)" />
+      <text x="470" y="105" class="svg-label-bold">agi-core</text>
+      <text x="470" y="123" class="svg-label-muted" style="font-size:11.5px">Tool registry · vector indexes</text>
+      <text x="470" y="139" class="svg-label-muted" style="font-size:11.5px">hub proxy · shared services</text>
+
+      <!-- agi-mcpfyer -->
+      <rect x="660" y="80" width="190" height="70" rx="10" fill="var(--panel)" stroke="var(--band1-edge)" />
+      <text x="680" y="105" class="svg-label-bold">agi-mcpfyer</text>
+      <text x="680" y="123" class="svg-label-muted" style="font-size:11.5px">OpenAPI → MCP generator</text>
+      <text x="680" y="139" class="svg-label-muted" style="font-size:11.5px">Build-time · versioned bundles</text>
+
+      <!-- agi-packs -->
+      <rect x="450" y="160" width="400" height="70" rx="10" fill="var(--panel)" stroke="var(--band1-edge)" />
+      <text x="470" y="185" class="svg-label-bold">agi-packs</text>
+      <text x="470" y="203" class="svg-label-muted" style="font-size:11.5px">Pack spec + reference packs: blank · telco-demo · fleet-demo</text>
+      <text x="470" y="219" class="svg-label-muted" style="font-size:11.5px">YAML only — no code</text>
+
+      <!-- Boundary arrow -->
+      <path d="M 450 270 L 450 305" stroke="var(--ink-muted)" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#arrow2)" />
+      <text x="465" y="290" class="svg-tag" fill="var(--ink-muted)">depends on (one direction)</text>
+
+      <!-- Band 2 wrapper -->
+      <rect x="30" y="320" width="840" height="210" rx="14" fill="var(--band2)" stroke="var(--band2-edge)" stroke-width="2" opacity="0.5" />
+      <text x="50" y="348" class="svg-label-bold" style="font-size:14px">BAND 2 · Reference Distribution (what Comviva field teams ship)</text>
+      <text x="850" y="348" text-anchor="end" class="svg-tag" fill="var(--warn)">docker compose · helm install</text>
+
+      <!-- agi-runtime -->
+      <rect x="50" y="370" width="195" height="140" rx="10" fill="var(--panel)" stroke="var(--band2-edge)" />
+      <text x="70" y="396" class="svg-label-bold">agi-runtime</text>
+      <text x="70" y="413" class="svg-label-muted" style="font-size:11.5px">FastAPI + MCP server</text>
+      <text x="70" y="430" class="svg-label-muted" style="font-size:11.5px">X-Pack header dispatch</text>
+      <text x="70" y="447" class="svg-label-muted" style="font-size:11.5px">Claims-validated</text>
+      <text x="70" y="464" class="svg-label-muted" style="font-size:11.5px">Pack-group-per-pod</text>
+      <text x="70" y="481" class="svg-label-muted" style="font-size:11.5px">+ single-pack hardening</text>
+
+      <!-- agi-ui -->
+      <rect x="260" y="370" width="195" height="140" rx="10" fill="var(--panel)" stroke="var(--band2-edge)" />
+      <text x="280" y="396" class="svg-label-bold">agi-ui</text>
+      <text x="280" y="413" class="svg-label-muted" style="font-size:11.5px">Next.js admin console</text>
+      <text x="280" y="430" class="svg-label-muted" style="font-size:11.5px">Pack switcher</text>
+      <text x="280" y="447" class="svg-label-muted" style="font-size:11.5px">AI-Trail viewer</text>
+      <text x="280" y="464" class="svg-label-muted" style="font-size:11.5px">Tool inspector · KB browser</text>
+      <text x="280" y="481" class="svg-label-muted" style="font-size:11.5px">Prompts: read-only</text>
+
+      <!-- agi-auth -->
+      <rect x="470" y="370" width="195" height="140" rx="10" fill="var(--panel)" stroke="var(--band2-edge)" />
+      <text x="490" y="396" class="svg-label-bold">agi-auth</text>
+      <text x="490" y="413" class="svg-label-muted" style="font-size:11.5px">Keycloak reference adapter</text>
+      <text x="490" y="430" class="svg-label-muted" style="font-size:11.5px">Generic OIDC interface</text>
+      <text x="490" y="447" class="svg-label-muted" style="font-size:11.5px">Static-token · dev-noop</text>
+      <text x="490" y="464" class="svg-label-muted" style="font-size:11.5px">Three-role RBAC</text>
+      <text x="490" y="481" class="svg-label-muted" style="font-size:11.5px">AGI_ADMIN/DEV/VIEWER</text>
+
+      <!-- agi-chart -->
+      <rect x="680" y="370" width="170" height="140" rx="10" fill="var(--panel)" stroke="var(--band2-edge)" />
+      <text x="700" y="396" class="svg-label-bold">agi-chart</text>
+      <text x="700" y="413" class="svg-label-muted" style="font-size:11.5px">Helm chart</text>
+      <text x="700" y="430" class="svg-label-muted" style="font-size:11.5px">BASE_PATH routing</text>
+      <text x="700" y="447" class="svg-label-muted" style="font-size:11.5px">ConfigMap packs</text>
+      <text x="700" y="464" class="svg-label-muted" style="font-size:11.5px">OTel collector wired</text>
+      <text x="700" y="481" class="svg-label-muted" style="font-size:11.5px">CI green vs kind</text>
+
+      <!-- Footer note -->
+      <text x="450" y="550" text-anchor="middle" class="svg-label-muted">pip install agi-sdk works without any Band 2 package. Band 2 depends on Band 1, never reverse.</text>
+    </svg>
+    <div class="cap">Figure 2 · The two bands — library is the heart, deployable is supported</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h4>Why the bands?</h4>
+      <p>The Framework Advocate said "library, never platform." The Platform Advocate said "go look at examples/ kills procurement." Both were right. Two visual altitudes is the compromise both can defend.</p>
+    </div>
+    <div class="card">
+      <h4>One-way dependency</h4>
+      <p>Band 2 imports Band 1. Band 1 never imports Band 2. A CI guardrail enforces this — same shape as care-intelligence's isolation gate.</p>
+    </div>
+    <div class="card">
+      <h4>Release cadence</h4>
+      <p>SDK majors gate distribution majors, not vice versa. The library can ship a minor that the distribution hasn't picked up yet; never the reverse.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== STACK MAP ==================== -->
+<section id="stack">
+  <h2><span class="num">§ 3</span>Component dependency map</h2>
+  <p class="lede">Who imports whom. Library on top, distribution at bottom, infrastructure below the line.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow3" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--ink-muted)" />
+        </marker>
+        <marker id="arrowAcc" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--accent)" />
+        </marker>
+      </defs>
+
+      <!-- Use case at top -->
+      <rect x="350" y="30" width="200" height="50" rx="10" fill="var(--panel-2)" stroke="var(--info)" stroke-width="2" />
+      <text x="450" y="55" text-anchor="middle" class="svg-label-bold">Use case service</text>
+      <text x="450" y="71" text-anchor="middle" class="svg-label-muted" style="font-size:11px">@use_case · packs/&lt;slug&gt;</text>
+
+      <!-- SDK row -->
+      <rect x="40" y="120" width="160" height="55" rx="10" fill="var(--band1)" stroke="var(--band1-edge)" />
+      <text x="120" y="143" text-anchor="middle" class="svg-label-bold">agi-sdk</text>
+      <text x="120" y="160" text-anchor="middle" class="svg-label-muted" style="font-size:11px">primitives</text>
+
+      <rect x="220" y="120" width="160" height="55" rx="10" fill="var(--band1)" stroke="var(--band1-edge)" />
+      <text x="300" y="143" text-anchor="middle" class="svg-label-bold">agi-core</text>
+      <text x="300" y="160" text-anchor="middle" class="svg-label-muted" style="font-size:11px">shared services</text>
+
+      <rect x="400" y="120" width="160" height="55" rx="10" fill="var(--band1)" stroke="var(--band1-edge)" />
+      <text x="480" y="143" text-anchor="middle" class="svg-label-bold">agi-mcpfyer</text>
+      <text x="480" y="160" text-anchor="middle" class="svg-label-muted" style="font-size:11px">OpenAPI → MCP</text>
+
+      <rect x="580" y="120" width="160" height="55" rx="10" fill="var(--band1)" stroke="var(--band1-edge)" />
+      <text x="660" y="143" text-anchor="middle" class="svg-label-bold">agi-packs</text>
+      <text x="660" y="160" text-anchor="middle" class="svg-label-muted" style="font-size:11px">pack spec + refs</text>
+
+      <!-- Arrows from use case to band 1 -->
+      <path d="M 420 80 L 180 120" stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#arrowAcc)" opacity="0.7" />
+      <path d="M 450 80 L 450 120" stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#arrowAcc)" opacity="0.5" />
+      <path d="M 470 80 L 640 120" stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#arrowAcc)" opacity="0.4" />
+
+      <!-- SDK to core arrow -->
+      <path d="M 200 145 L 220 145" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow3)" />
+      <path d="M 380 145 L 400 145" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow3)" />
+
+      <!-- Distribution row -->
+      <rect x="40" y="240" width="190" height="60" rx="10" fill="var(--band2)" stroke="var(--band2-edge)" />
+      <text x="135" y="266" text-anchor="middle" class="svg-label-bold">agi-runtime</text>
+      <text x="135" y="284" text-anchor="middle" class="svg-label-muted" style="font-size:11px">FastAPI + MCP shell</text>
+
+      <rect x="250" y="240" width="190" height="60" rx="10" fill="var(--band2)" stroke="var(--band2-edge)" />
+      <text x="345" y="266" text-anchor="middle" class="svg-label-bold">agi-ui</text>
+      <text x="345" y="284" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Next.js admin console</text>
+
+      <rect x="460" y="240" width="190" height="60" rx="10" fill="var(--band2)" stroke="var(--band2-edge)" />
+      <text x="555" y="266" text-anchor="middle" class="svg-label-bold">agi-auth</text>
+      <text x="555" y="284" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Keycloak ref + OIDC</text>
+
+      <rect x="670" y="240" width="190" height="60" rx="10" fill="var(--band2)" stroke="var(--band2-edge)" />
+      <text x="765" y="266" text-anchor="middle" class="svg-label-bold">agi-chart</text>
+      <text x="765" y="284" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Helm</text>
+
+      <!-- Arrows from distribution to library -->
+      <path d="M 135 240 L 120 175" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow3)" />
+      <path d="M 345 240 L 345 295 L 345 250 M 345 240 L 480 175" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow3)" opacity="0.5" />
+      <path d="M 345 240 L 345 175 L 350 175" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow3)" />
+      <path d="M 555 240 L 555 175 L 560 175" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" stroke-dasharray="3 3" />
+      <path d="M 765 240 L 765 175 L 660 175" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" stroke-dasharray="3 3" />
+
+      <!-- Divider line -->
+      <line x1="40" y1="350" x2="860" y2="350" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 4" />
+      <text x="450" y="345" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">────  Infrastructure (per deployment)  ────</text>
+
+      <!-- Infra row -->
+      <rect x="40" y="370" width="170" height="65" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="125" y="395" text-anchor="middle" class="svg-label-bold">LiteLLM</text>
+      <text x="125" y="412" text-anchor="middle" class="svg-label-muted" style="font-size:11px">model runner</text>
+      <text x="125" y="426" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">in-process</text>
+
+      <rect x="225" y="370" width="170" height="65" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="310" y="395" text-anchor="middle" class="svg-label-bold">LangGraph / Pydantic-AI</text>
+      <text x="310" y="412" text-anchor="middle" class="svg-label-muted" style="font-size:11px">optional adapters</text>
+      <text x="310" y="426" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">opt-in</text>
+
+      <rect x="410" y="370" width="170" height="65" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="495" y="395" text-anchor="middle" class="svg-label-bold">OpenLLMetry</text>
+      <text x="495" y="412" text-anchor="middle" class="svg-label-muted" style="font-size:11px">auto-instrument</text>
+      <text x="495" y="426" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">at boot</text>
+
+      <rect x="595" y="370" width="170" height="65" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="680" y="395" text-anchor="middle" class="svg-label-bold">MCP Python SDK</text>
+      <text x="680" y="412" text-anchor="middle" class="svg-label-muted" style="font-size:11px">tool protocol</text>
+      <text x="680" y="426" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">official</text>
+
+      <!-- Storage row -->
+      <rect x="40" y="465" width="180" height="60" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="130" y="490" text-anchor="middle" class="svg-label-bold">Storage</text>
+      <text x="130" y="508" text-anchor="middle" class="svg-label-muted" style="font-size:11px">SQLite · Postgres · Mongo</text>
+
+      <rect x="240" y="465" width="180" height="60" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="330" y="490" text-anchor="middle" class="svg-label-bold">Vector store</text>
+      <text x="330" y="508" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Qdrant · pgvector · Atlas</text>
+
+      <rect x="440" y="465" width="180" height="60" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="530" y="490" text-anchor="middle" class="svg-label-bold">Langfuse</text>
+      <text x="530" y="508" text-anchor="middle" class="svg-label-muted" style="font-size:11px">OTLP sink · telemetry</text>
+
+      <rect x="640" y="465" width="180" height="60" rx="10" fill="var(--panel-2)" stroke="var(--line)" />
+      <text x="730" y="490" text-anchor="middle" class="svg-label-bold">AI-Trail</text>
+      <text x="730" y="508" text-anchor="middle" class="svg-label-muted" style="font-size:11px">audit sink (Mongo/PG)</text>
+
+      <text x="450" y="565" text-anchor="middle" class="svg-label-muted">Solid arrow = imports.   Dashed = consumes via env config, not Python import.</text>
+    </svg>
+    <div class="cap">Figure 3 · Component dependency map — library imports nothing from distribution</div>
+  </div>
+</section>
+
+<!-- ==================== REQUEST FLOW ==================== -->
+<section id="request">
+  <h2><span class="num">§ 4</span>Request flow — anatomy of one agent call</h2>
+  <p class="lede">A client posts to <code>/chat</code> on agi-runtime. Tenant claims, pack resolution, agent loop, tool calls, telemetry — all in one picture.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 540" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow4" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--accent)" />
+        </marker>
+      </defs>
+
+      <!-- Swim lanes -->
+      <line x1="180" y1="40" x2="180" y2="500" stroke="var(--line)" stroke-dasharray="4 4"/>
+      <line x1="380" y1="40" x2="380" y2="500" stroke="var(--line)" stroke-dasharray="4 4"/>
+      <line x1="580" y1="40" x2="580" y2="500" stroke="var(--line)" stroke-dasharray="4 4"/>
+      <line x1="760" y1="40" x2="760" y2="500" stroke="var(--line)" stroke-dasharray="4 4"/>
+
+      <!-- Lane headers -->
+      <rect x="20" y="20" width="160" height="36" rx="6" fill="var(--panel-2)"/>
+      <text x="100" y="44" text-anchor="middle" class="svg-label-bold">Client</text>
+
+      <rect x="190" y="20" width="190" height="36" rx="6" fill="var(--band2)" stroke="var(--band2-edge)" opacity="0.7"/>
+      <text x="285" y="44" text-anchor="middle" class="svg-label-bold">agi-runtime</text>
+
+      <rect x="390" y="20" width="190" height="36" rx="6" fill="var(--band1)" stroke="var(--band1-edge)" opacity="0.7"/>
+      <text x="485" y="44" text-anchor="middle" class="svg-label-bold">agi-sdk</text>
+
+      <rect x="590" y="20" width="170" height="36" rx="6" fill="var(--panel-2)"/>
+      <text x="675" y="44" text-anchor="middle" class="svg-label-bold">LLM / MCP</text>
+
+      <rect x="770" y="20" width="120" height="36" rx="6" fill="var(--panel-2)"/>
+      <text x="830" y="44" text-anchor="middle" class="svg-label-bold">Telemetry</text>
+
+      <!-- Steps -->
+      <!-- 1 -->
+      <circle cx="100" cy="85" r="13" fill="var(--accent)"/>
+      <text x="100" y="89" text-anchor="middle" fill="white" font-size="12" font-weight="600">1</text>
+      <text x="20" y="115" class="svg-label" style="font-size:12px">POST /chat</text>
+      <text x="20" y="130" class="svg-label-muted" style="font-size:11px">X-Pack: telco-demo</text>
+      <text x="20" y="144" class="svg-label-muted" style="font-size:11px">Bearer &lt;jwt&gt;</text>
+      <path d="M 130 85 L 188 85" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow4)"/>
+
+      <!-- 2 -->
+      <circle cx="285" cy="85" r="13" fill="var(--accent)"/>
+      <text x="285" y="89" text-anchor="middle" fill="white" font-size="12" font-weight="600">2</text>
+      <text x="195" y="115" class="svg-label" style="font-size:12px">Verify JWT</text>
+      <text x="195" y="130" class="svg-label-muted" style="font-size:11px">via agi-auth</text>
+      <text x="195" y="144" class="svg-label-muted" style="font-size:11px">(Keycloak)</text>
+
+      <!-- 3 -->
+      <circle cx="285" cy="165" r="13" fill="var(--warn)"/>
+      <text x="285" y="169" text-anchor="middle" fill="white" font-size="12" font-weight="600">3</text>
+      <text x="195" y="195" class="svg-label" style="font-size:12px">Claim ↔ X-Pack</text>
+      <text x="195" y="210" class="svg-label-muted" style="font-size:11px">match required</text>
+      <text x="195" y="224" class="svg-label-muted" style="font-size:11px;fill:var(--bad)">mismatch → 401</text>
+
+      <!-- 4 -->
+      <circle cx="285" cy="245" r="13" fill="var(--accent)"/>
+      <text x="285" y="249" text-anchor="middle" fill="white" font-size="12" font-weight="600">4</text>
+      <text x="195" y="275" class="svg-label" style="font-size:12px">Load Pack</text>
+      <text x="195" y="290" class="svg-label-muted" style="font-size:11px">from YAML</text>
+      <path d="M 320 245 L 388 245" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow4)"/>
+
+      <!-- 5 -->
+      <circle cx="485" cy="245" r="13" fill="var(--accent)"/>
+      <text x="485" y="249" text-anchor="middle" fill="white" font-size="12" font-weight="600">5</text>
+      <text x="400" y="275" class="svg-label" style="font-size:12px">Set baggage</text>
+      <text x="400" y="290" class="svg-label-muted" style="font-size:11px">bm.pack · use_case</text>
+      <text x="400" y="304" class="svg-label-muted" style="font-size:11px">bm.tenant_id</text>
+      <path d="M 485 268 L 830 460" stroke="var(--info)" stroke-width="1" stroke-dasharray="2 2" fill="none" opacity="0.5"/>
+
+      <!-- 6 -->
+      <circle cx="485" cy="325" r="13" fill="var(--accent)"/>
+      <text x="485" y="329" text-anchor="middle" fill="white" font-size="12" font-weight="600">6</text>
+      <text x="400" y="355" class="svg-label" style="font-size:12px">Resolve role</text>
+      <text x="400" y="370" class="svg-label-muted" style="font-size:11px">"reasoning" →</text>
+      <text x="400" y="384" class="svg-label-muted" style="font-size:11px">bedrock/sonnet</text>
+      <path d="M 520 325 L 588 325" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow4)"/>
+
+      <!-- 7 -->
+      <circle cx="675" cy="325" r="13" fill="var(--accent)"/>
+      <text x="675" y="329" text-anchor="middle" fill="white" font-size="12" font-weight="600">7</text>
+      <text x="595" y="355" class="svg-label" style="font-size:12px">litellm.acompletion</text>
+      <text x="595" y="370" class="svg-label-muted" style="font-size:11px">OpenLLMetry span</text>
+      <path d="M 675 348 L 830 440" stroke="var(--info)" stroke-width="1" stroke-dasharray="2 2" fill="none" opacity="0.6"/>
+
+      <!-- 8 -->
+      <circle cx="675" cy="405" r="13" fill="var(--info)"/>
+      <text x="675" y="409" text-anchor="middle" fill="white" font-size="12" font-weight="600">8</text>
+      <text x="595" y="430" class="svg-label" style="font-size:12px">Tool call?</text>
+      <text x="595" y="445" class="svg-label-muted" style="font-size:11px">MCP via agi-mcpfyer</text>
+      <text x="595" y="460" class="svg-label-muted" style="font-size:11px">side-effect tagged</text>
+
+      <!-- 9 -->
+      <circle cx="830" cy="430" r="13" fill="var(--info)"/>
+      <text x="830" y="434" text-anchor="middle" fill="white" font-size="12" font-weight="600">9</text>
+      <text x="775" y="465" class="svg-label" style="font-size:11.5px">Langfuse</text>
+      <text x="775" y="479" class="svg-label-muted" style="font-size:11px">+ AI-Trail</text>
+      <text x="775" y="493" class="svg-label-muted" style="font-size:11px">(audit sink)</text>
+
+      <!-- 10 response -->
+      <circle cx="100" cy="475" r="13" fill="var(--good)"/>
+      <text x="100" y="479" text-anchor="middle" fill="white" font-size="12" font-weight="600">10</text>
+      <text x="20" y="505" class="svg-label" style="font-size:12px">200 OK</text>
+      <text x="20" y="520" class="svg-label-muted" style="font-size:11px">correlation_id</text>
+
+      <path d="M 575 425 L 195 470" stroke="var(--good)" stroke-width="2" fill="none" stroke-dasharray="3 3" marker-end="url(#arrow4)"/>
+      <path d="M 185 470 L 130 475" stroke="var(--good)" stroke-width="2" fill="none" marker-end="url(#arrow4)"/>
+    </svg>
+    <div class="cap">Figure 4 · Anatomy of /chat — claims-based dispatch, role resolution, telemetry teeing</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h4>Step 3 closes the leak</h4>
+      <p>The multi-tenant data-leak the Platform Advocate warned about. Header alone never determines pack; the token's tenant claim must match. Mismatch returns 401, never 200.</p>
+    </div>
+    <div class="card">
+      <h4>Step 5 enables observability</h4>
+      <p>Once OTel baggage is set, every downstream span carries pack/use-case/tenant attributes. Langfuse can slice by any of them; AI-Trail captures the same correlation_id.</p>
+    </div>
+    <div class="card">
+      <h4>Step 7 is library-mode</h4>
+      <p>No central model proxy. The use-case process calls LiteLLM directly. No SPOF, no gateway team, no latency hop.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== TENANCY + LEAK ==================== -->
+<section id="tenancy">
+  <h2><span class="num">§ 5</span>Tenancy — the leak and how it's closed</h2>
+  <p class="lede">Header-dispatched packs in a shared runtime are the operationally-sane shape. They are also a data-leak waiting to happen <em>unless</em> dispatch is claims-based. The diagram below shows both versions side-by-side.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg">
+      <!-- Naive (left) -->
+      <rect x="20" y="20" width="410" height="320" rx="12" fill="var(--panel-2)" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="225" y="48" text-anchor="middle" class="svg-label-bold" fill="var(--bad)">✗ Naive: trust the header</text>
+
+      <rect x="40" y="70" width="80" height="40" rx="6" fill="var(--panel)"/>
+      <text x="80" y="85" text-anchor="middle" class="svg-label" style="font-size:11px">Tenant A</text>
+      <text x="80" y="100" text-anchor="middle" class="svg-label-muted" style="font-size:10px">token: A</text>
+
+      <rect x="320" y="70" width="80" height="40" rx="6" fill="var(--panel)"/>
+      <text x="360" y="85" text-anchor="middle" class="svg-label" style="font-size:11px">runtime</text>
+      <text x="360" y="100" text-anchor="middle" class="svg-label-muted" style="font-size:10px">accepts X-Pack</text>
+
+      <path d="M 125 90 L 316 90" stroke="var(--bad)" stroke-width="1.5" fill="none"/>
+      <text x="220" y="78" text-anchor="middle" class="svg-label-muted" style="font-size:10px">X-Pack: tenant-B</text>
+      <text x="220" y="105" text-anchor="middle" class="svg-label-muted" style="font-size:10px;fill:var(--bad)">token says A, header says B</text>
+
+      <rect x="40" y="150" width="80" height="40" rx="6" fill="var(--panel)"/>
+      <rect x="320" y="150" width="80" height="40" rx="6" fill="var(--panel)"/>
+      <text x="80" y="173" text-anchor="middle" class="svg-label" style="font-size:11px">storage</text>
+      <text x="360" y="166" text-anchor="middle" class="svg-label" style="font-size:11px">queries</text>
+      <text x="360" y="181" text-anchor="middle" class="svg-label-muted" style="font-size:10px">pack=B</text>
+
+      <path d="M 320 170 L 125 170" stroke="var(--bad)" stroke-width="1.5" fill="none"/>
+
+      <rect x="40" y="240" width="370" height="80" rx="8" fill="rgba(255,107,107,.08)" stroke="var(--bad)"/>
+      <text x="60" y="265" class="svg-label" fill="var(--bad)" style="font-size:12px;font-weight:600">Failure mode:</text>
+      <text x="60" y="284" class="svg-label-muted" style="font-size:12px">Tenant A authenticates as themselves but</text>
+      <text x="60" y="300" class="svg-label-muted" style="font-size:12px">sends X-Pack: tenant-B → reads B's data.</text>
+
+      <!-- Closed (right) -->
+      <rect x="470" y="20" width="410" height="320" rx="12" fill="var(--panel-2)" stroke="var(--good)" stroke-width="1.5"/>
+      <text x="675" y="48" text-anchor="middle" class="svg-label-bold" fill="var(--good)">✓ v3: claims-based dispatch</text>
+
+      <rect x="490" y="70" width="80" height="40" rx="6" fill="var(--panel)"/>
+      <text x="530" y="85" text-anchor="middle" class="svg-label" style="font-size:11px">Tenant A</text>
+      <text x="530" y="100" text-anchor="middle" class="svg-label-muted" style="font-size:10px">token: A</text>
+
+      <rect x="770" y="70" width="80" height="40" rx="6" fill="var(--panel)"/>
+      <text x="810" y="85" text-anchor="middle" class="svg-label" style="font-size:11px">runtime</text>
+      <text x="810" y="100" text-anchor="middle" class="svg-label-muted" style="font-size:10px">validates match</text>
+
+      <path d="M 575 90 L 766 90" stroke="var(--good)" stroke-width="1.5" fill="none"/>
+      <text x="670" y="78" text-anchor="middle" class="svg-label-muted" style="font-size:10px">X-Pack: tenant-B</text>
+
+      <!-- Reject -->
+      <rect x="490" y="150" width="370" height="60" rx="8" fill="rgba(255,107,107,.08)" stroke="var(--bad)"/>
+      <text x="675" y="175" text-anchor="middle" class="svg-label" fill="var(--bad)" style="font-size:12.5px;font-weight:600">tenant_claim ≠ X-Pack  →  401 Unauthorized</text>
+      <text x="675" y="195" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">no pack load, no storage query, no leak</text>
+
+      <rect x="490" y="240" width="370" height="80" rx="8" fill="rgba(62,207,142,.08)" stroke="var(--good)"/>
+      <text x="510" y="265" class="svg-label" fill="var(--good)" style="font-size:12px;font-weight:600">Mitigation also includes:</text>
+      <text x="510" y="284" class="svg-label-muted" style="font-size:12px">· Storage queries scoped on pack_slug</text>
+      <text x="510" y="300" class="svg-label-muted" style="font-size:12px">· Fuzz test in CI verifies isolation</text>
+    </svg>
+    <div class="cap">Figure 5 · The tenancy leak — and how claims-based dispatch closes it</div>
+  </div>
+</section>
+
+<!-- ==================== HOTFIX ==================== -->
+<section id="hotfix">
+  <h2><span class="num">§ 6</span>The 15-minute prompt-hotfix lane</h2>
+  <p class="lede">The Platform Advocate's strongest argument was Friday-night ops pain. The Framework Advocate's strongest counter was the regulator audit hole. The resolution: a documented hotfix lane that gives both sides what they need — fast prod, full review trail.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow5" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--accent)" />
+        </marker>
+      </defs>
+
+      <!-- Steps as horizontal pipeline -->
+      <g>
+        <rect x="20" y="100" width="130" height="80" rx="10" fill="var(--panel-2)" stroke="var(--accent)"/>
+        <text x="85" y="125" text-anchor="middle" class="svg-label-bold">1 · branch</text>
+        <text x="85" y="145" text-anchor="middle" class="svg-label-muted" style="font-size:11px">pack-hotfix/</text>
+        <text x="85" y="159" text-anchor="middle" class="svg-label-muted" style="font-size:11px">INC-4421</text>
+        <text x="85" y="173" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">~1 MIN</text>
+      </g>
+      <path d="M 150 140 L 175 140" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow5)"/>
+
+      <g>
+        <rect x="180" y="100" width="130" height="80" rx="10" fill="var(--panel-2)" stroke="var(--accent)"/>
+        <text x="245" y="125" text-anchor="middle" class="svg-label-bold">2 · edit YAML</text>
+        <text x="245" y="145" text-anchor="middle" class="svg-label-muted" style="font-size:11px">prompts/</text>
+        <text x="245" y="159" text-anchor="middle" class="svg-label-muted" style="font-size:11px">refund.yaml</text>
+        <text x="245" y="173" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">~2 MIN</text>
+      </g>
+      <path d="M 310 140 L 335 140" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow5)"/>
+
+      <g>
+        <rect x="340" y="100" width="130" height="80" rx="10" fill="var(--panel-2)" stroke="var(--accent)"/>
+        <text x="405" y="125" text-anchor="middle" class="svg-label-bold">3 · smoke CI</text>
+        <text x="405" y="145" text-anchor="middle" class="svg-label-muted" style="font-size:11px">kb load · prompt</text>
+        <text x="405" y="159" text-anchor="middle" class="svg-label-muted" style="font-size:11px">render · schema</text>
+        <text x="405" y="173" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">~3 MIN</text>
+      </g>
+      <path d="M 470 140 L 495 140" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow5)"/>
+
+      <g>
+        <rect x="500" y="100" width="130" height="80" rx="10" fill="var(--panel-2)" stroke="var(--good)"/>
+        <text x="565" y="125" text-anchor="middle" class="svg-label-bold">4 · fast-merge</text>
+        <text x="565" y="145" text-anchor="middle" class="svg-label-muted" style="font-size:11px">reviewer bot</text>
+        <text x="565" y="159" text-anchor="middle" class="svg-label-muted" style="font-size:11px">+ auto-tag</text>
+        <text x="565" y="173" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">~1 MIN</text>
+      </g>
+      <path d="M 630 140 L 655 140" stroke="var(--good)" stroke-width="2" fill="none" marker-end="url(#arrow5)"/>
+
+      <g>
+        <rect x="660" y="100" width="130" height="80" rx="10" fill="var(--panel-2)" stroke="var(--good)"/>
+        <text x="725" y="125" text-anchor="middle" class="svg-label-bold">5 · image push</text>
+        <text x="725" y="145" text-anchor="middle" class="svg-label-muted" style="font-size:11px">GHCR</text>
+        <text x="725" y="159" text-anchor="middle" class="svg-label-muted" style="font-size:11px">+ rollout</text>
+        <text x="725" y="173" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">~8 MIN</text>
+      </g>
+      <path d="M 790 140 L 815 140" stroke="var(--good)" stroke-width="2" fill="none" marker-end="url(#arrow5)"/>
+
+      <g>
+        <circle cx="855" cy="140" r="22" fill="var(--good)"/>
+        <text x="855" y="138" text-anchor="middle" fill="white" font-size="11" font-weight="600">LIVE</text>
+        <text x="855" y="152" text-anchor="middle" fill="white" font-size="9">≤ 15 min</text>
+      </g>
+
+      <!-- Header -->
+      <text x="20" y="50" class="svg-label-bold" style="font-size:14px">pack-hotfix/INC-4421</text>
+      <text x="20" y="70" class="svg-label-muted">Documented branch convention + CI workflow template ships with the product.</text>
+
+      <!-- Bottom note -->
+      <text x="450" y="225" text-anchor="middle" class="svg-label-bold">Every step leaves an immutable trail.</text>
+      <text x="450" y="245" text-anchor="middle" class="svg-label-muted">PR (who · what · why) → CI artifact (the smoke output) → image tag (immutable) → rollout (timestamped).</text>
+      <text x="450" y="262" text-anchor="middle" class="svg-label-muted">A regulator asking "why did the refund threshold change on March 14" gets a full, reviewable answer.</text>
+    </svg>
+    <div class="cap">Figure 6 · Hotfix lane — Friday-night-friendly without bypassing review</div>
+  </div>
+
+  <table>
+    <thead><tr><th>What ops wanted</th><th>What audit needed</th><th>v3 answer</th></tr></thead>
+    <tbody>
+      <tr><td>No CI pipeline they don't own</td><td>Reproducible diff in source control</td><td>Pack repo lives in tenant's git → tenant owns its CI</td></tr>
+      <tr><td>Roll-forward and back fast</td><td>Versioned, signed image tags</td><td>Container image tag per pack version; rollback = previous tag</td></tr>
+      <tr><td>No human approval at 2am</td><td>Human review on every behavior change</td><td>Reviewer bot enforces 1 LGTM from a pack maintainer; off-hours rotation</td></tr>
+      <tr><td>15-minute change window</td><td>Survives an audit</td><td>≤ 15 min merge-to-live; full trail at every step</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== ORCHESTRATION ==================== -->
+<section id="orch">
+  <h2><span class="num">§ 7</span>Orchestration choice tree</h2>
+  <p class="lede">Plain <code>async def</code> is the default for new use cases. Two adapters bless one alternative each. The tree below is the recommendation flow.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow6" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--ink-muted)" />
+        </marker>
+      </defs>
+
+      <!-- Root -->
+      <rect x="350" y="20" width="200" height="60" rx="10" fill="var(--panel-2)" stroke="var(--accent)"/>
+      <text x="450" y="46" text-anchor="middle" class="svg-label-bold">New use case</text>
+      <text x="450" y="64" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">What does it need?</text>
+
+      <!-- Q1 -->
+      <path d="M 450 80 L 450 110" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow6)"/>
+      <rect x="320" y="115" width="260" height="50" rx="10" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="450" y="138" text-anchor="middle" class="svg-label">Durable multi-step state?</text>
+      <text x="450" y="155" text-anchor="middle" class="svg-label-muted" style="font-size:11px">checkpointing · HITL · long-running</text>
+
+      <!-- Branches -->
+      <path d="M 380 165 L 200 195" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow6)"/>
+      <text x="280" y="180" class="svg-tag" fill="var(--ink-muted)">YES</text>
+
+      <path d="M 520 165 L 700 195" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow6)"/>
+      <text x="615" y="180" class="svg-tag" fill="var(--ink-muted)">NO</text>
+
+      <!-- Q2 left -->
+      <rect x="50" y="200" width="300" height="50" rx="10" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="200" y="223" text-anchor="middle" class="svg-label">Need type-first ergonomics?</text>
+      <text x="200" y="240" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Pydantic-native state</text>
+
+      <!-- Q2 right -->
+      <rect x="550" y="200" width="300" height="50" rx="10" fill="var(--panel-2)" stroke="var(--line)"/>
+      <text x="700" y="223" text-anchor="middle" class="svg-label">Single-turn or simple loop?</text>
+      <text x="700" y="240" text-anchor="middle" class="svg-label-muted" style="font-size:11px">no special framework needed</text>
+
+      <!-- Branches under Q2L -->
+      <path d="M 150 250 L 80 295" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow6)"/>
+      <text x="100" y="280" class="svg-tag" fill="var(--ink-muted)">YES</text>
+      <path d="M 250 250 L 320 295" stroke="var(--ink-muted)" stroke-width="1.5" fill="none" marker-end="url(#arrow6)"/>
+      <text x="305" y="280" class="svg-tag" fill="var(--ink-muted)">NO</text>
+
+      <!-- Recommendations -->
+      <rect x="20" y="300" width="180" height="100" rx="10" fill="rgba(167,139,250,.12)" stroke="var(--info)" stroke-width="2"/>
+      <text x="110" y="328" text-anchor="middle" class="svg-label-bold" fill="var(--info)">pydantic_ai</text>
+      <text x="110" y="348" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Type-first, MIT</text>
+      <text x="110" y="363" text-anchor="middle" class="svg-label-muted" style="font-size:11px">No LC types</text>
+      <text x="110" y="380" text-anchor="middle" class="svg-tag" fill="var(--info)">BLESSED · 150 LOC ADAPTER</text>
+
+      <rect x="220" y="300" width="180" height="100" rx="10" fill="rgba(79,156,249,.12)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="310" y="328" text-anchor="middle" class="svg-label-bold" fill="var(--accent)">langgraph</text>
+      <text x="310" y="348" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Checkpoint · HITL</text>
+      <text x="310" y="363" text-anchor="middle" class="svg-label-muted" style="font-size:11px">MIT · watch Elastic-2.0 line</text>
+      <text x="310" y="380" text-anchor="middle" class="svg-tag" fill="var(--accent)">BLESSED · 150 LOC ADAPTER</text>
+
+      <rect x="610" y="300" width="180" height="100" rx="10" fill="rgba(62,207,142,.12)" stroke="var(--good)" stroke-width="2"/>
+      <text x="700" y="328" text-anchor="middle" class="svg-label-bold" fill="var(--good)">plain async def</text>
+      <text x="700" y="348" text-anchor="middle" class="svg-label-muted" style="font-size:11px">No framework</text>
+      <text x="700" y="363" text-anchor="middle" class="svg-label-muted" style="font-size:11px">Zero gravity</text>
+      <text x="700" y="380" text-anchor="middle" class="svg-tag" fill="var(--good)">DEFAULT · 0 LOC</text>
+
+      <!-- Footer rules -->
+      <text x="450" y="440" text-anchor="middle" class="svg-label-bold">Two blessed options keeps "library-first" credible.</text>
+      <text x="450" y="460" text-anchor="middle" class="svg-label-muted">One blessed option silently becomes The Way. Adapters set OTel baggage and resolve MCP tools from the pack allow-list — nothing more.</text>
+    </svg>
+    <div class="cap">Figure 7 · Orchestration tree — pick by use-case shape, not by framework loyalty</div>
+  </div>
+
+  <table>
+    <thead><tr><th>Watch-condition</th><th>Likely outcome</th></tr></thead>
+    <tbody>
+      <tr><td>LangChain Inc. moves HITL/checkpointing behind LangGraph Platform (Elastic-2.0)</td><td>Demote <code>langgraph</code> to "supported," promote <code>pydantic_ai</code> or <code>strands</code> to blessed</td></tr>
+      <tr><td>≥ 80% of packs become durable workflows with retries</td><td>Externalise durability to Temporal/Inngest/Hatchet; LLM call sites stay plain async</td></tr>
+      <tr><td>Use cases stay request-scoped, no HITL</td><td>Drop <code>langgraph</code> blessed status; plain async + <code>pydantic_ai</code> is enough</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== DECISION PROVENANCE ==================== -->
+<section id="decisions">
+  <h2><span class="num">§ 8</span>Decision provenance — who said what, who won</h2>
+  <p class="lede">Each ratified decision had two named positions in the debate. The chip shows who won. Eight resolved, three open.</p>
+
+  <table>
+    <thead>
+      <tr><th>Decision</th><th>Framework position</th><th>Platform position</th><th>Resolved as</th><th>Owner of win</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>R1 · Deployment unit</strong></td>
+        <td>Pack-per-pod default</td>
+        <td>Multi-pack-per-pod default</td>
+        <td>Pack-group-per-pod with claims dispatch + hardening mode</td>
+        <td><span class="decision-chip pf">Platform · pragmatic</span></td>
+      </tr>
+      <tr>
+        <td><strong>R2 · Runtime/UI altitude</strong></td>
+        <td>In examples/, never in arch diagram</td>
+        <td>First-class, in the box</td>
+        <td>Two-band architecture; same repo, distinct altitude</td>
+        <td><span class="decision-chip both">Compromise · two bands</span></td>
+      </tr>
+      <tr>
+        <td><strong>R3 · Prompts</strong></td>
+        <td>YAML-in-pack only, PR-reviewed</td>
+        <td>DB-stored, runtime-editable</td>
+        <td>YAML-in-pack + 15-min hotfix lane</td>
+        <td><span class="decision-chip fw">Framework · with delivery investment</span></td>
+      </tr>
+      <tr>
+        <td><strong>R4 · Model runner</strong></td>
+        <td>LiteLLM library mode</td>
+        <td>(conceded R1)</td>
+        <td>LiteLLM library mode</td>
+        <td><span class="decision-chip fw">Framework · uncontested</span></td>
+      </tr>
+      <tr>
+        <td><strong>R5 · Telemetry vs audit</strong></td>
+        <td>OpenLLMetry only; AI-Trail audit-only</td>
+        <td>(conceded R2)</td>
+        <td>OpenLLMetry telemetry + AI-Trail audit sink</td>
+        <td><span class="decision-chip fw">Framework · uncontested</span></td>
+      </tr>
+      <tr>
+        <td><strong>R6 · Identity</strong></td>
+        <td>Generic OIDC; Keycloak as one option</td>
+        <td>Keycloak first-class</td>
+        <td>Keycloak first-class reference; generic OIDC interface</td>
+        <td><span class="decision-chip pf">Platform · procurement reality</span></td>
+      </tr>
+      <tr>
+        <td><strong>R7 · Auto-MCP placement</strong></td>
+        <td>Inside agi-core</td>
+        <td>First-class repo</td>
+        <td>First-class <code>agi-mcpfyer</code> repo</td>
+        <td><span class="decision-chip pf">Platform · visibility</span></td>
+      </tr>
+      <tr>
+        <td><strong>R8 · Orchestration</strong></td>
+        <td>Plain async + optional LangGraph</td>
+        <td>(unstated)</td>
+        <td>Plain async default + LangGraph + Pydantic-AI blessed adapters</td>
+        <td><span class="decision-chip both">Research-backed · two blessed</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Win pattern</h3>
+  <div class="grid">
+    <div class="card">
+      <h4 style="color:var(--accent)">Framework won when…</h4>
+      <p>The question was about <em>internal discipline</em> — what the SDK looks like, where telemetry lives, how prompts are reviewed. The library-first doctrine held.</p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--warn)">Platform won when…</h4>
+      <p>The question was about <em>customer-site reality</em> — what gets deployed, how procurement signs off, how operators see what's happening at 2am.</p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--good)">Compromise when…</h4>
+      <p>Both positions had load-bearing weight. The two-band architecture and the two-blessed-orchestrator pattern both fall here.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== TELEMETRY VS AUDIT ==================== -->
+<section id="trace">
+  <h2><span class="num">§ 9</span>Telemetry vs audit — two streams, one capture</h2>
+  <p class="lede">A subtle but load-bearing distinction. OpenLLMetry is for engineers debugging behavior. AI-Trail is for regulators and ops asking "what did the agent do for ticket #INC-4421." Same capture, two sinks, different schemas.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow7" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,-5 L10,0 L0,5" fill="var(--ink-muted)" />
+        </marker>
+      </defs>
+
+      <!-- Single source -->
+      <rect x="320" y="30" width="260" height="80" rx="12" fill="var(--band1)" stroke="var(--band1-edge)" stroke-width="2"/>
+      <text x="450" y="58" text-anchor="middle" class="svg-label-bold">Use case process</text>
+      <text x="450" y="80" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">Traceloop.init() at boot</text>
+      <text x="450" y="96" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">OpenLLMetry auto-instrument · LiteLLM · MCP · LangGraph</text>
+
+      <!-- OTel collector -->
+      <path d="M 450 110 L 450 145" stroke="var(--ink-muted)" stroke-width="2" fill="none" marker-end="url(#arrow7)"/>
+      <text x="465" y="130" class="svg-tag" fill="var(--ink-muted)">OTLP</text>
+
+      <rect x="320" y="150" width="260" height="60" rx="12" fill="var(--panel-2)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="450" y="178" text-anchor="middle" class="svg-label-bold">OpenTelemetry Collector</text>
+      <text x="450" y="196" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">single capture · tees two ways</text>
+
+      <!-- Tee -->
+      <path d="M 380 210 L 200 270" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arrow7)"/>
+      <path d="M 520 210 L 700 270" stroke="var(--warn)" stroke-width="2" fill="none" marker-end="url(#arrow7)"/>
+
+      <!-- Sink 1: Langfuse -->
+      <rect x="40" y="275" width="320" height="65" rx="12" fill="var(--panel-2)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="200" y="298" text-anchor="middle" class="svg-label-bold" fill="var(--accent)">Langfuse · telemetry</text>
+      <text x="200" y="316" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">Trace tree · spans · tokens · cost · latency</text>
+      <text x="200" y="332" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">FOR ENGINEERS · UI: LANGFUSE WEB</text>
+
+      <!-- Sink 2: AI Trail -->
+      <rect x="540" y="275" width="320" height="65" rx="12" fill="var(--panel-2)" stroke="var(--warn)" stroke-width="1.5"/>
+      <text x="700" y="298" text-anchor="middle" class="svg-label-bold" fill="var(--warn)">AI-Trail · audit</text>
+      <text x="700" y="316" text-anchor="middle" class="svg-label-muted" style="font-size:11.5px">Event tree · correlation_id · side-effect events</text>
+      <text x="700" y="332" text-anchor="middle" class="svg-tag" fill="var(--ink-muted)">FOR OPS+REGULATORS · UI: AGI-UI</text>
+    </svg>
+    <div class="cap">Figure 8 · One capture, two sinks — telemetry and audit don't share a code path in the use case</div>
+  </div>
+
+  <table>
+    <thead><tr><th></th><th>Telemetry · Langfuse</th><th>Audit · AI-Trail</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Audience</strong></td><td>Engineers debugging behavior</td><td>Ops debugging incidents · regulators asking why</td></tr>
+      <tr><td><strong>Schema</strong></td><td>OTel spans (Gen-AI semantic conventions)</td><td>Tamper-evident event schema with side-effect annotations</td></tr>
+      <tr><td><strong>Retention</strong></td><td>~30 days, sampling allowed</td><td>Full retention per tenant policy, no sampling</td></tr>
+      <tr><td><strong>Access</strong></td><td>Anyone with dev scope</td><td>Pack-scoped; viewer scope only</td></tr>
+      <tr><td><strong>UI</strong></td><td>Langfuse web</td><td>agi-ui <code>/audit</code> screen</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================== TIMELINE ==================== -->
+<section id="timeline">
+  <h2><span class="num">§ 10</span>Phases · ~14 weeks to v1.0</h2>
+  <p class="lede">Eight phases. Band-1 builds first; Band-2 follows; retrofit closes the loop. The phase 1.5 orchestrator adapters land in parallel with Phase 1.</p>
+
+  <div class="tl">
+    <div class="tl-item">
+      <h5>Phase 0 · Public repo scaffold <span class="pill" style="margin-left:6px">Week 1</span></h5>
+      <p>GitHub org · Apache-2.0 · CI skeleton · reserve PyPI names</p>
+    </div>
+    <div class="tl-item">
+      <h5>Phase 1 · agi-sdk shell <span class="pill accent" style="margin-left:6px">Band 1 · Wk 2–3</span></h5>
+      <p>Port v0 SDK · sdk.models / mcp / prompts / config / serve · Traceloop.init() · pack loader · isolation gate · TestPyPI</p>
+    </div>
+    <div class="tl-item">
+      <h5>Phase 1.5 · Orchestrator adapters <span class="pill accent" style="margin-left:6px">Band 1 · Wk 3</span></h5>
+      <p>sdk.orchestrators.langgraph + sdk.orchestrators.pydantic_ai — ~150 LOC each · optional install extras</p>
+    </div>
+    <div class="tl-item">
+      <h5>Phase 2 · Auto-MCP hub <span class="pill accent" style="margin-left:6px">Band 1 · Wk 4–5</span></h5>
+      <p>Generalised mcpfyer · works against any OpenAPI · versioned bundles · side-effect flags</p>
+    </div>
+    <div class="tl-item">
+      <h5>Phase 3 · Reference runtime <span class="pill warn" style="margin-left:6px">Band 2 · Wk 6–7</span></h5>
+      <p>FastAPI shell · claims-validated X-Pack dispatch · pack-group-per-pod default · docker-compose with Langfuse + Qdrant</p>
+    </div>
+    <div class="tl-item">
+      <h5>Phase 4 · Admin UI <span class="pill warn" style="margin-left:6px">Band 2 · Wk 8–9</span></h5>
+      <p>Next.js 14+ · pack switcher · AI-Trail viewer · tool inspector · KB browser · prompts read-only</p>
+    </div>
+    <div class="tl-item">
+      <h5>Phase 5 · Reference packs + Helm <span class="pill warn" style="margin-left:6px">Band 2 · Wk 10–11</span></h5>
+      <p>telco-demo + fleet-demo · Helm chart with BASE_PATH · CI green vs kind · hotfix workflow template</p>
+    </div>
+    <div class="tl-item good">
+      <h5>Phase 6 · Retrofit + v1.0 <span class="pill good" style="margin-left:6px">Wk 12–14</span></h5>
+      <p>Port care-intelligence to agi-sdk via langgraph adapter · plan bm-ai-platform migration · security review · v1.0 tag</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  v3 · 2026-05-22 · <code>office/project-agi/DESIGN.html</code> · Companions: <code>PLAN.html</code> (phases) · <code>DEBATE.md</code> (transcript) · <code>RESOLVED_STACK.md</code> (decisions) · <code>ADMIN_CONSOLE.md</code> (UI spec)
+</div>
+
+</div>
+</body>
+</html>

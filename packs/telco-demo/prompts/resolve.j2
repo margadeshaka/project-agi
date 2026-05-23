@@ -1,0 +1,47 @@
+{# SPDX-FileCopyrightText: 2026 project-agi contributors #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  Resolve prompt — agent is authorised to take an autonomous action.
+
+  Context variables:
+    customer_question: string
+    customer:        { id, name, plan, status }
+    invoice:         { id, amount, currency, due_date, line_items }
+    credit_cap:      number   — max autonomous credit you may issue
+    policy_excerpt:  string   — relevant policy paragraph
+#}
+The customer asked:
+
+  "{{ customer_question }}"
+
+Customer on file:
+  id:     {{ customer.id }}
+  plan:   {{ customer.plan }}
+  status: {{ customer.status }}
+
+Most recent invoice:
+  id:        {{ invoice.id }}
+  amount:    {{ invoice.amount }} {{ invoice.currency }}
+  due:       {{ invoice.due_date }}
+  line_items:
+{% for item in invoice.line_items | default([]) -%}
+    - {{ item.description }} ({{ item.amount }} {{ invoice.currency }})
+{% endfor %}
+
+Policy:
+  {{ policy_excerpt }}
+
+Decision rules:
+1. Read the invoice. Identify whether the disputed charge falls inside the
+   policy excerpt.
+2. If it does and the credit needed is <= {{ credit_cap }}
+   {{ invoice.currency }}, call `billing.issue_credit` with a clear
+   `reason` field, then summarise the outcome to the customer in 3
+   sentences.
+3. If it does NOT, do not credit. Explain why and offer to open a tier-2
+   ticket with `ticket.create`.
+4. Never apply a credit larger than {{ credit_cap }} {{ invoice.currency }}
+   in one autonomous step.
+
+Disclose the action you took (or refused to take) in your reply. Cite the
+policy paragraph.

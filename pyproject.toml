@@ -1,0 +1,52 @@
+[project]
+name = "project-agi"
+version = "0.1.0-dev"
+description = "Open-source, self-hosted, configuration-driven Agent Intelligence stack"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [
+    { name = "project-agi contributors" },
+]
+
+[tool.uv.workspace]
+members = [
+    "packages/agi-sdk",
+    "packages/agi-core",
+    "packages/agi-mcpfyer",
+    "distribution/agi-runtime",
+    "distribution/agi-auth",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "S"]
+ignore = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+# Optional extras (langgraph, pydantic-ai, motor, traceloop-sdk, opentelemetry)
+# may or may not be present at type-check time depending on which `uv sync`
+# flags were used. Where we conditionally import them inside functions we
+# carry `# type: ignore[import-not-found]` for the no-extras case; when extras
+# ARE installed those become "unused" — accept either state.
+disable_error_code = ["unused-ignore"]
+
+# python-jose is a runtime dep of agi-auth but has no maintained stubs.
+[[tool.mypy.overrides]]
+module = ["jose", "jose.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["packages/*/tests", "distribution/*/tests"]
+asyncio_mode = "auto"
+# importlib mode avoids the "duplicate `tests` package" collision that the
+# default `prepend` mode trips on across workspace members.
+# See conftest.py for the matching sys.path workaround for `uv run python`.
+addopts = "--import-mode=importlib"

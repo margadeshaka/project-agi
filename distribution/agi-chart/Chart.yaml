@@ -1,0 +1,27 @@
+apiVersion: v2
+name: agi
+description: |
+  project-agi reference Helm chart. Deploys the agi-runtime (FastAPI +
+  MCP server with claims-validated X-Pack dispatch), the agi-ui admin
+  console, and an OTel collector sidecar. Multi-tenant by default
+  (pack-group-per-pod); hardening mode (single pack per pod) is a values
+  toggle. Packs are mounted from a ConfigMap by default; PVC mode is
+  supported.
+type: application
+version: 0.5.0-dev
+appVersion: "0.5.0-dev"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/comviva-oss/project-agi
+sources:
+  - https://github.com/comviva-oss/project-agi
+maintainers:
+  - name: project-agi contributors
+keywords:
+  - agi
+  - llm
+  - multi-tenant
+  - mcp
+  - keycloak
+annotations:
+  category: AI
+  licenses: Apache-2.0

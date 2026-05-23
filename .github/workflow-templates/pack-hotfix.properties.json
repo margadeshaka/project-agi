@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/github-workflow-template-properties.json",
+  "name": "Pack hotfix",
+  "description": "Validate, build and push a project-agi pack bundle from a `pack-hotfix/<slug>/<ticket-id>` branch, then notify the rollout webhook. SPDX-License-Identifier: Apache-2.0",
+  "iconName": "example-icon",
+  "categories": ["Deployment", "Continuous integration"],
+  "filePatterns": ["packs/.*/pack\\.yaml$"]
+}

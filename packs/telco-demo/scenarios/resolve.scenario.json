@@ -1,0 +1,56 @@
+{
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "schema_version": 1,
+  "slug": "telco-resolve",
+  "pack": "telco-demo",
+  "title": "Duplicate charge — autonomous credit",
+  "description": "Customer reports a duplicate charge under the credit cap. Assistant must verify policy, issue a credit, and disclose the action.",
+  "category": "resolve",
+  "input": {
+    "customer_id": "cust-acme-1002",
+    "channel": "chat",
+    "locale": "en",
+    "utterances": [
+      "I see two identical charges of 18 USD on my last bill — one of them must be a mistake."
+    ]
+  },
+  "context": {
+    "customer": {
+      "id": "cust-acme-1002",
+      "plan": "advance-30gb",
+      "status": "active"
+    },
+    "invoice": {
+      "id": "inv-2026-04-cust-1002",
+      "amount": 76.00,
+      "currency": "USD",
+      "due_date": "2026-05-15",
+      "line_items": [
+        { "description": "Plan: advance-30gb",        "amount": 40.00 },
+        { "description": "Roaming pass — 1 day",      "amount": 18.00 },
+        { "description": "Roaming pass — 1 day",      "amount": 18.00 }
+      ]
+    },
+    "credit_cap": 25.00,
+    "policy_excerpt": "Duplicate charges that have not yet been refunded may be credited up to the cap without supervisor approval."
+  },
+  "expected_events": [
+    { "type": "agent.turn.start", "match": { "scenario": "telco-resolve" } },
+    { "type": "tool.call",        "match": { "name": "customer.lookup" } },
+    { "type": "tool.result",      "match": { "name": "customer.lookup", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "billing.get_invoice" } },
+    { "type": "tool.result",      "match": { "name": "billing.get_invoice", "status": "ok" } },
+    { "type": "tool.call",        "match": { "name": "billing.issue_credit", "args.amount": 18.00 } },
+    { "type": "tool.result",      "match": { "name": "billing.issue_credit", "status": "ok" } },
+    { "type": "llm.response",     "match": { "role": "assistant" } },
+    { "type": "agent.turn.end",   "match": { "outcome": "resolved" } }
+  ],
+  "expected_no_events": [
+    { "type": "tool.call", "match": { "name": "ticket.escalate" } }
+  ],
+  "assertions": {
+    "credit_amount_max": 25.00,
+    "disclosure_required": true,
+    "must_cite_policy_excerpt": true
+  }
+}

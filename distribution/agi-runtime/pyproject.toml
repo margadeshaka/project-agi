@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agi-runtime"
+version = "0.3.0-dev"
+description = "project-agi reference FastAPI runtime — X-Pack dispatch, MCP server, /chat /tools /kb /trail /admin routes"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [
+    { name = "project-agi contributors" },
+]
+keywords = ["agi", "fastapi", "runtime", "mcp", "multi-tenant"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: FastAPI",
+]
+
+dependencies = [
+    "agi-sdk",
+    "agi-core",
+    "agi-mcpfyer",
+    "agi-auth",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2",
+    "pyyaml",
+    "httpx",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "mypy",
+    "ruff",
+    "httpx",
+]
+
+[project.scripts]
+agi-runtime = "agi_runtime.main:run"
+
+[project.urls]
+Homepage = "https://github.com/comviva-oss/project-agi"
+Repository = "https://github.com/comviva-oss/project-agi"
+
+[tool.uv.sources]
+agi-sdk = { workspace = true }
+agi-core = { workspace = true }
+agi-mcpfyer = { workspace = true }
+agi-auth = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["agi_runtime"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "agi_runtime/",
+    "tests/",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

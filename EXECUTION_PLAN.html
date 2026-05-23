@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>project-agi — execution plan (v1)</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#11151a; --panel-2:#161b22; --panel-3:#1c232c;
+    --ink:#e6edf3; --ink-muted:#9aa6b2; --ink-dim:#6b7684;
+    --line:#2a313a; --line-soft:#1f262e;
+    --accent:#4f9cf9; --accent-2:#7fc4ff;
+    --good:#3ecf8e; --warn:#f5b14d; --bad:#ff6b6b; --info:#a78bfa;
+    --band1:#1e3a5f; --band1-edge:#4f9cf9;
+    --band2:#3d2b1f; --band2-edge:#f5b14d;
+    --code-bg:#0f1318;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f5f7fa; --panel:#fff; --panel-2:#f0f3f7; --panel-3:#e6ebf1;
+      --ink:#0f1419; --ink-muted:#475569; --ink-dim:#94a3b8;
+      --line:#dbe1e8; --line-soft:#e9edf2;
+      --accent:#1f6feb; --accent-2:#0a5bd4;
+      --good:#1a7f37; --warn:#bf8700; --bad:#cf222e; --info:#7c3aed;
+      --band1:#e0ecfa; --band1-edge:#1f6feb;
+      --band2:#fbf0dc; --band2-edge:#bf8700;
+      --code-bg:#f1f4f8;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .page{max-width:1200px;margin:0 auto;padding:32px 24px 96px}
+
+  header.hero{padding:32px 32px 28px;background:radial-gradient(circle at top right,rgba(79,156,249,.08),transparent 60%),var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:28px}
+  header.hero h1{margin:0 0 8px;font-size:32px;letter-spacing:-0.02em}
+  header.hero .sub{margin:0 0 18px;color:var(--ink-muted);font-size:15px;max-width:80ch}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{display:inline-flex;align-items:center;padding:5px 11px;font-size:12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-muted);font-weight:500}
+  .pill.accent{background:rgba(79,156,249,.12);color:var(--accent);border-color:rgba(79,156,249,.35)}
+  .pill.good{background:rgba(62,207,142,.12);color:var(--good);border-color:rgba(62,207,142,.35)}
+  .pill.warn{background:rgba(245,177,77,.12);color:var(--warn);border-color:rgba(245,177,77,.35)}
+  .pill.info{background:rgba(167,139,250,.14);color:var(--info);border-color:rgba(167,139,250,.4)}
+
+  nav.toc{position:sticky;top:0;background:var(--bg);padding:12px 0;border-bottom:1px solid var(--line);margin:-8px 0 24px;display:flex;flex-wrap:wrap;gap:6px;z-index:5}
+  nav.toc a{font-size:13px;padding:6px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink-muted)}
+  nav.toc a:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
+
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;margin:0 0 22px}
+  section > h2{margin:0 0 4px;font-size:22px;letter-spacing:-0.01em;display:flex;align-items:baseline;gap:10px}
+  section > h2 .num{font-size:13px;color:var(--ink-dim);font-weight:500}
+  section > .lede{color:var(--ink-muted);margin:0 0 18px;font-size:14.5px;max-width:78ch}
+  h3{margin:24px 0 10px;font-size:14px;color:var(--ink);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+  h4{margin:14px 0 6px;font-size:14.5px}
+
+  ul,ol{padding-left:20px;margin:8px 0}
+  li{margin:4px 0}
+  code{background:var(--code-bg);border:1px solid var(--line-soft);padding:1px 6px;border-radius:5px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre{background:var(--code-bg);border:1px solid var(--line-soft);padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{color:var(--ink-muted);font-weight:600;background:var(--panel-2);font-size:11.5px;text-transform:uppercase;letter-spacing:0.07em}
+  tr:last-child td{border-bottom:none}
+
+  /* Gantt */
+  .gantt{width:100%;margin:18px 0;overflow-x:auto}
+  .gantt-grid{display:grid;grid-template-columns:160px repeat(14, minmax(38px,1fr));gap:2px;font-size:11.5px;min-width:760px}
+  .gantt-head{background:var(--panel-2);padding:6px 4px;text-align:center;color:var(--ink-muted);font-weight:600;border-radius:4px}
+  .gantt-rowhead{background:var(--panel-2);padding:8px 10px;font-weight:600;border-radius:4px;display:flex;align-items:center}
+  .gantt-cell{height:32px;background:var(--panel-2);border-radius:4px;position:relative;border:1px solid var(--line-soft)}
+  .gantt-cell.has-bar{overflow:visible}
+  .bar{position:absolute;top:4px;bottom:4px;left:2px;right:2px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:white;white-space:nowrap}
+  .bar.band1{background:linear-gradient(90deg,#3b82f6,#60a5fa);border:1px solid #2563eb}
+  .bar.band2{background:linear-gradient(90deg,#d97706,#f59e0b);border:1px solid #b45309}
+  .bar.both{background:linear-gradient(90deg,#10b981,#34d399);border:1px solid #059669}
+  .bar.span2{left:2px;right:-40px}
+
+  /* Phase cards */
+  .phase{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0;margin:18px 0;overflow:hidden}
+  .phase-head{padding:14px 18px;background:var(--panel-3);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .phase-head .title{display:flex;align-items:baseline;gap:10px}
+  .phase-head .id{font-size:11px;font-weight:700;color:var(--ink-muted);font-variant-numeric:tabular-nums;letter-spacing:0.08em}
+  .phase-head .name{font-size:15px;font-weight:600}
+  .phase-body{padding:16px 18px}
+  .phase-body h5{margin:10px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-muted)}
+  .phase-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  @media (max-width:720px){.phase-grid{grid-template-columns:1fr}}
+
+  .check{padding-left:0;list-style:none}
+  .check li{position:relative;padding-left:24px;margin:5px 0;font-size:13.5px}
+  .check li::before{content:'';position:absolute;left:4px;top:6px;width:12px;height:12px;border-radius:3px;border:1.5px solid var(--ink-muted)}
+  .check.done li::before{background:var(--good);border-color:var(--good)}
+
+  .gate{background:rgba(245,177,77,.08);border:1px solid rgba(245,177,77,.35);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:10px 0}
+  .gate strong{color:var(--warn)}
+  .gate p{margin:4px 0 0;color:var(--ink-muted);font-size:13.5px}
+
+  .risk{background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.3);border-left:4px solid var(--bad);border-radius:8px;padding:10px 14px;margin:10px 0}
+  .risk strong{color:var(--bad)}
+
+  .role-chip{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:0.02em;margin:0 4px 4px 0;border:1px solid}
+  .role-chip.tl{background:rgba(167,139,250,.12);color:var(--info);border-color:rgba(167,139,250,.4)}
+  .role-chip.be{background:rgba(79,156,249,.12);color:var(--accent);border-color:rgba(79,156,249,.4)}
+  .role-chip.fe{background:rgba(245,177,77,.12);color:var(--warn);border-color:rgba(245,177,77,.4)}
+  .role-chip.ds{background:rgba(62,207,142,.12);color:var(--good);border-color:rgba(62,207,142,.4)}
+  .role-chip.qa{background:rgba(167,139,250,.08);color:var(--info);border-color:rgba(167,139,250,.3)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+  .card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h4{margin:0 0 6px;font-size:14px}
+  .card p{margin:0;color:var(--ink-muted);font-size:13.5px}
+  .card .kpi{font-size:22px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;margin:4px 0}
+
+  .footer{color:var(--ink-muted);font-size:12.5px;text-align:center;margin-top:32px}
+  @media (max-width:720px){section{padding:18px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>project-agi · execution plan</h1>
+  <p class="sub">14-week execution plan from public-repo scaffold to v1.0. Each phase has a single owner role (assignment pending), explicit deliverables, acceptance criteria, and a phase gate the team must clear before the next phase begins.</p>
+  <div class="pill-row">
+    <span class="pill accent">v1 · 2026-05-22</span>
+    <span class="pill good">8 phases · 14 weeks</span>
+    <span class="pill warn">3 phase gates</span>
+    <span class="pill info">Companion: PLAN.html · DESIGN.html</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#summary">Summary</a>
+  <a href="#gantt">Gantt</a>
+  <a href="#roles">Roles</a>
+  <a href="#phase0">P0</a>
+  <a href="#phase1">P1</a>
+  <a href="#phase15">P1.5</a>
+  <a href="#phase2">P2</a>
+  <a href="#phase3">P3</a>
+  <a href="#phase4">P4</a>
+  <a href="#phase5">P5</a>
+  <a href="#phase6">P6</a>
+  <a href="#cadence">Cadence</a>
+  <a href="#risks">Risk register</a>
+  <a href="#deps">Dependencies</a>
+</nav>
+
+<!-- ============ SUMMARY ============ -->
+<section id="summary">
+  <h2><span class="num">§ 1</span>Summary at a glance</h2>
+  <div class="grid">
+    <div class="card">
+      <h4>Duration</h4>
+      <div class="kpi">14 weeks</div>
+      <p>Wk 1 (Phase 0 scaffold) → Wk 14 (v1.0 announce)</p>
+    </div>
+    <div class="card">
+      <h4>Phases</h4>
+      <div class="kpi">8</div>
+      <p>0, 1, 1.5 (parallel), 2, 3, 4, 5, 6</p>
+    </div>
+    <div class="card">
+      <h4>Tagged releases</h4>
+      <div class="kpi">7</div>
+      <p>v0.1, v0.1.5, v0.2, v0.3, v0.4, v0.5, v1.0</p>
+    </div>
+    <div class="card">
+      <h4>Phase gates</h4>
+      <div class="kpi">3</div>
+      <p>End of P1 (SDK works), end of P3 (runtime deploys), end of P5 (Helm CI green)</p>
+    </div>
+    <div class="card">
+      <h4>Minimum team size</h4>
+      <div class="kpi">4 engineers</div>
+      <p>1 tech lead, 2 backend, 1 frontend. Can grow to 6 in P3–4 (concurrency).</p>
+    </div>
+    <div class="card">
+      <h4>External dependencies</h4>
+      <div class="kpi">3</div>
+      <p>PyPI namespace approval · GitHub org decision · trademark name clearance</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GANTT ============ -->
+<section id="gantt">
+  <h2><span class="num">§ 2</span>Timeline (Gantt)</h2>
+  <p class="lede">Phase 1.5 (orchestrator adapters) runs in parallel with the tail of Phase 1. Phase 4 (UI) starts as soon as the runtime API surface from Phase 3 is stable.</p>
+
+  <div class="gantt">
+    <div class="gantt-grid">
+      <div></div>
+      <div class="gantt-head">W1</div><div class="gantt-head">W2</div><div class="gantt-head">W3</div>
+      <div class="gantt-head">W4</div><div class="gantt-head">W5</div><div class="gantt-head">W6</div>
+      <div class="gantt-head">W7</div><div class="gantt-head">W8</div><div class="gantt-head">W9</div>
+      <div class="gantt-head">W10</div><div class="gantt-head">W11</div><div class="gantt-head">W12</div>
+      <div class="gantt-head">W13</div><div class="gantt-head">W14</div>
+
+      <div class="gantt-rowhead">P0 Scaffold</div>
+      <div class="gantt-cell has-bar"><div class="bar both">scaffold</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P1 agi-sdk</div>
+      <div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar band1">port</div></div>
+      <div class="gantt-cell has-bar"><div class="bar band1">primitives · TestPyPI</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P1.5 adapters</div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar band1">lg + pa</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P2 agi-mcpfyer</div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar band1">generator</div></div>
+      <div class="gantt-cell has-bar"><div class="bar band1">bundles</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P3 agi-runtime</div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar band2">routes · dispatch</div></div>
+      <div class="gantt-cell has-bar"><div class="bar band2">compose · GHCR</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P4 agi-ui</div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar band2">4a scaffold</div></div>
+      <div class="gantt-cell has-bar"><div class="bar band2">4b tools + 4c audit</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P5 packs + chart</div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar band2">packs</div></div>
+      <div class="gantt-cell has-bar"><div class="bar band2">helm · kind CI</div></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+
+      <div class="gantt-rowhead">P6 retrofit + v1.0</div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell"></div><div class="gantt-cell"></div>
+      <div class="gantt-cell has-bar"><div class="bar both">care-i retrofit</div></div>
+      <div class="gantt-cell has-bar"><div class="bar both">harden</div></div>
+      <div class="gantt-cell has-bar"><div class="bar both">v1.0 cut</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h4>Phase gate 1 · end of W3</h4>
+      <p><code>pip install agi-sdk</code> from TestPyPI works on a clean VM. <strong>Block P2 if not green.</strong></p>
+    </div>
+    <div class="card">
+      <h4>Phase gate 2 · end of W7</h4>
+      <p><code>docker compose up</code> launches runtime + Langfuse + Qdrant; <code>/chat</code> end-to-end against a real LLM. <strong>Block P4 if not green.</strong></p>
+    </div>
+    <div class="card">
+      <h4>Phase gate 3 · end of W11</h4>
+      <p>Helm chart CI is green against a kind cluster; pack hotfix workflow template passes a synthetic hotfix in &lt; 15 min. <strong>Block v1.0 cut if not green.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROLES ============ -->
+<section id="roles">
+  <h2><span class="num">§ 3</span>Roles &amp; assignments</h2>
+  <p class="lede">Owners are listed by role. Names assigned once the project owner confirms team composition.</p>
+
+  <table>
+    <thead><tr><th>Role</th><th>Responsibility</th><th>Active in phases</th><th>Headcount</th></tr></thead>
+    <tbody>
+      <tr><td><span class="role-chip tl">TL</span> Tech Lead</td><td>Architecture, code review, gate sign-off, escalation owner</td><td>All</td><td>1</td></tr>
+      <tr><td><span class="role-chip be">BE</span> Backend Eng (Sr)</td><td>SDK primitives, mcpfyer, runtime, auth adapter</td><td>P1, P1.5, P2, P3, P6</td><td>2</td></tr>
+      <tr><td><span class="role-chip fe">FE</span> Frontend Eng</td><td>Admin UI, theming, OIDC flow, AI-Trail viewer</td><td>P4</td><td>1</td></tr>
+      <tr><td><span class="role-chip ds">Ops</span> DevOps / SRE</td><td>Helm chart, kind CI, GHCR images, Langfuse self-host, Qdrant ops</td><td>P0, P3, P5</td><td>0.5 (shared)</td></tr>
+      <tr><td><span class="role-chip qa">QA</span> Test Eng</td><td>Isolation gate, fuzz tests, e2e Playwright, perf baseline, security review</td><td>P1, P3, P4, P5, P6</td><td>0.5 (shared)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>RACI summary</h3>
+  <table>
+    <thead><tr><th>Decision class</th><th>R</th><th>A</th><th>C</th><th>I</th></tr></thead>
+    <tbody>
+      <tr><td>Architecture / API shape</td><td>TL</td><td>TL</td><td>BE, FE</td><td>Project owner</td></tr>
+      <tr><td>SDK release tag</td><td>BE</td><td>TL</td><td>QA</td><td>Project owner</td></tr>
+      <tr><td>Chart release</td><td>Ops</td><td>TL</td><td>BE, QA</td><td>Project owner</td></tr>
+      <tr><td>Open OSS questions (repo loc, name, eval)</td><td>Project owner</td><td>Project owner</td><td>TL, BE</td><td>Team</td></tr>
+      <tr><td>Phase gate sign-off</td><td>TL</td><td>Project owner</td><td>QA</td><td>Team</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ PHASE 0 ============ -->
+<section id="phase0">
+  <h2><span class="num">§ 4.0</span>Phase 0 · Public repo scaffold</h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P0 · W1</span>
+        <span class="name">Scaffold the public repo</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip ds">Ops</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li>GitHub org chosen (open decision #1) and public repo created</li>
+            <li>LICENSE (Apache-2.0), CODE_OF_CONDUCT, CONTRIBUTING, SECURITY</li>
+            <li>Issue templates (bug, feature, security)</li>
+            <li>Branch protection on <code>main</code> (1 review + status checks)</li>
+            <li>GitHub Actions: lint, type-check, test, build (matrix: 3.11, 3.12, 3.13)</li>
+            <li>PyPI namespace reservations for <code>agi-sdk</code>, <code>agi-core</code>, <code>agi-mcpfyer</code></li>
+            <li>This <code>docs/</code> set imported (PLAN.html, DESIGN.html, DEBATE.md, RESOLVED_STACK.md, ADMIN_CONSOLE.md, EXECUTION_PLAN.html, CONSOLE_REQUIREMENTS.html)</li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li>External evaluator (not on the team) can clone, push a "hello" PR, see CI run</li>
+            <li>SECURITY.md links to a private disclosure channel</li>
+            <li>README leads with the library install, not the docker stack</li>
+            <li>Repo passes <code>gh repo audit</code> (or equivalent) baseline</li>
+          </ul>
+          <h5>Risks</h5>
+          <div class="risk">
+            <strong>Trademark / name clash</strong>
+            <p>Name search must clear before any public push. Fall back to a working name if blocked.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1 ============ -->
+<section id="phase1">
+  <h2><span class="num">§ 4.1</span>Phase 1 · agi-sdk shell <span class="pill accent" style="margin-left:8px">Band 1</span></h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P1 · W2-W3</span>
+        <span class="name">Port the framework v0 SDK to agi-sdk</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip be">BE × 2</span><span class="role-chip qa">QA</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li>Lift <code>sdk/bm_ai/</code> → <code>packages/agi-sdk/agi/</code>, rename namespace</li>
+            <li><code>sdk.models</code> — role-keyed bindings, LiteLLM runner, <code>ModelBinding.kwargs()</code></li>
+            <li><code>sdk.mcp</code> — official MCP Python SDK wrapper</li>
+            <li><code>sdk.rag</code> — Qdrant default, abstract <code>VectorStore</code> protocol</li>
+            <li><code>sdk.prompts</code> — YAML loader, j2 rendering, locale resolution</li>
+            <li><code>sdk.config</code> — Pydantic + layered loader (env > pack > operator > defaults)</li>
+            <li><code>sdk.serve</code> — FastAPI + MCP exposure, baggage set on every request</li>
+            <li><code>sdk.trail</code> — audit sink interface (memory / file-jsonl / mongo)</li>
+            <li><code>Traceloop.init()</code> bootstrap → OpenLLMetry auto-instrument at module import</li>
+            <li>Pack loader: YAML → immutable <code>Pack</code> object</li>
+            <li><code>packs/blank/</code> reference pack</li>
+            <li><code>test_isolation_gate.py</code> — fails CI if SDK imports <code>agi_runtime</code>/<code>agi_ui</code></li>
+            <li>Lint rule: <code>import openai</code>/<code>import anthropic</code>/<code>import boto3</code> requires <code># bm-ai: allow native sdk</code> waiver comment</li>
+            <li>Publish to TestPyPI as <code>agi-sdk==0.1.0</code></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li><code>pip install agi-sdk</code> from TestPyPI on a clean VM succeeds in &lt; 60s</li>
+            <li>20-line <code>main.py</code> from <code>examples/embedded</code> runs against OpenAI/Ollama and emits OTel spans</li>
+            <li>Span attributes <code>bm.pack</code>, <code>bm.use_case</code>, <code>bm.tenant_id</code> overlay correctly</li>
+            <li>Switching <code>operator.yaml</code>'s <code>reasoning</code> binding swaps provider with zero code change</li>
+            <li>Isolation gate test green; lint waiver enforced</li>
+            <li>≥ 80% line coverage on each <code>sdk.*</code> module</li>
+            <li>Type-check passes under mypy strict mode</li>
+          </ul>
+          <div class="gate">
+            <strong>Phase gate 1</strong>
+            <p>End of W3. TL signs off. If not green, P2 does not start.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1.5 ============ -->
+<section id="phase15">
+  <h2><span class="num">§ 4.1.5</span>Phase 1.5 · Orchestrator adapters <span class="pill accent" style="margin-left:8px">Band 1 · parallel with P1 tail</span></h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P1.5 · W3</span>
+        <span class="name">Bless LangGraph + Pydantic-AI as optional</span>
+      </div>
+      <div>
+        <span class="role-chip be">BE × 1</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li><code>sdk.orchestrators.langgraph</code> — ~150 LOC</li>
+            <li><code>sdk.orchestrators.pydantic_ai</code> — ~150 LOC</li>
+            <li>Both expose <code>resolve_tools(pack)</code> and <code>set_baggage(span_ctx)</code></li>
+            <li>Optional install extras: <code>pip install agi-sdk[langgraph]</code>, <code>pip install agi-sdk[pydantic-ai]</code></li>
+            <li>Reference use case using each adapter in <code>examples/</code></li>
+            <li>Docs page: "Choosing an orchestrator" — plain async / langgraph / pydantic-ai decision tree</li>
+            <li>Tag <code>v0.1.5</code> on TestPyPI</li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li>Adapters add zero dependencies to base <code>agi-sdk</code> install</li>
+            <li>Trace shape (span attributes, ordering) is identical across plain-async, langgraph, pydantic-ai</li>
+            <li>Same example use case (e.g. <code>bill_explainer</code>) ships in all three flavours, identical behavior</li>
+            <li>Docs explicitly state when each is the right pick + watch-conditions for re-evaluation</li>
+          </ul>
+          <h5>Risks</h5>
+          <div class="risk">
+            <strong>LangGraph license drift</strong>
+            <p>If <code>langgraph-api</code> tightens Elastic-2.0 boundary during this window, pause adapter and reassess. See PLAN.html § 5 watch-conditions.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 2 ============ -->
+<section id="phase2">
+  <h2><span class="num">§ 4.2</span>Phase 2 · agi-mcpfyer <span class="pill accent" style="margin-left:8px">Band 1</span></h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P2 · W4-W5</span>
+        <span class="name">Generalise the auto-MCP-from-OpenAPI generator</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip be">BE × 1</span><span class="role-chip qa">QA</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li>Lift <code>core/bm_core/mcpfyer/</code> + <code>hub/</code> + <code>registry/</code> → <code>packages/agi-mcpfyer/</code></li>
+            <li>Generalise: parse any OpenAPI 3.0+ spec (not only TMF)</li>
+            <li>Per-tool metadata: input/output JSON Schema, side-effect flag, rate-limit class, dry-run support</li>
+            <li>One MCP endpoint per logical domain (configurable grouping)</li>
+            <li>Versioned tool bundles; SHA + semver pinning</li>
+            <li>CLI: <code>agi-mcpfyer build path/to/openapi.yaml --out bundle/</code></li>
+            <li>Reference run: build MCP bundle from a public OpenAPI (e.g. Stripe, GitHub) and call a read tool end-to-end</li>
+            <li>Publish to TestPyPI as <code>agi-mcpfyer==0.2.0</code></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li>Build a runnable MCP server from a non-TMF OpenAPI spec with zero code changes</li>
+            <li>Side-effect flag correctly inferred from HTTP method (overrides via OpenAPI extension)</li>
+            <li>Dry-run mode does not call upstream for write operations</li>
+            <li>Bundle reproducibility: same input → byte-identical output (SHA verified)</li>
+            <li>OpenLLMetry spans on every MCP tool call carry tool name + domain + side-effect flag</li>
+          </ul>
+          <h5>Risks</h5>
+          <div class="risk">
+            <strong>OpenAPI dialect variance</strong>
+            <p>Real-world specs use OpenAPI 3.0 / 3.1 / Swagger 2 / various extensions. v1 supports 3.0+; document deviations in <code>docs/mcpfyer-compat.md</code>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 3 ============ -->
+<section id="phase3">
+  <h2><span class="num">§ 4.3</span>Phase 3 · agi-runtime <span class="pill warn" style="margin-left:8px">Band 2</span></h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P3 · W6-W7</span>
+        <span class="name">Reference FastAPI runtime + docker stack</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip be">BE × 2</span><span class="role-chip ds">Ops</span><span class="role-chip qa">QA</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li><code>distribution/agi-runtime/</code> FastAPI app</li>
+            <li>Routes: <code>POST /chat</code>, <code>GET/POST /tools</code>, <code>POST /tools/{name}</code>, <code>GET /kb</code>, <code>POST /kb</code>, <code>GET /trail</code>, <code>GET /trail/{cid}</code>, <code>POST /mcp</code>, <code>GET /healthz</code>, <code>GET /readyz</code>, <code>GET /admin/*</code></li>
+            <li><strong>Claims-validated</strong> <code>X-Pack</code> header dispatch (mismatch → 401, missing → 400)</li>
+            <li>Pack-group-per-pod default; single-pack hardening mode behind env flag <code>AGI_HARDEN=1</code></li>
+            <li>SSE streaming for <code>/chat</code></li>
+            <li><code>distribution/agi-auth/</code> — Keycloak reference adapter, generic OIDC interface, static-token + dev-noop modes</li>
+            <li>Three-role RBAC enforced at dispatch (<code>AGI_ADMIN</code>, <code>AGI_DEVELOPER</code>, <code>AGI_VIEWER</code>)</li>
+            <li><code>deploy/docker/docker-compose.yml</code> — agi-runtime + MongoDB + Qdrant + Langfuse + (optional) Ollama</li>
+            <li>Image published to GHCR: <code>ghcr.io/&lt;org&gt;/agi-runtime:0.3.0</code></li>
+            <li>OpenAPI spec served at <code>/openapi.json</code></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li><code>docker compose up</code> on a clean VM brings the stack live in &lt; 5 minutes</li>
+            <li>End-to-end <code>/chat</code> call with a real LLM succeeds and produces traces in Langfuse</li>
+            <li>X-Pack claim mismatch fuzz test: 1000 random claim/header pairs → 0 leaks past 401</li>
+            <li>Smoke: hot-swap a pack folder, <code>POST /admin/packs/&lt;slug&gt;/reload</code>, request succeeds with new config</li>
+            <li>OIDC adapter passes against a local Keycloak realm (sample realm shipped)</li>
+            <li>Hardening mode rejects all non-self-pack requests (single-pack-per-pod)</li>
+          </ul>
+          <div class="gate">
+            <strong>Phase gate 2</strong>
+            <p>End of W7. TL + Ops sign off. If not green, P4 does not start.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 4 ============ -->
+<section id="phase4">
+  <h2><span class="num">§ 4.4</span>Phase 4 · agi-ui <span class="pill warn" style="margin-left:8px">Band 2</span></h2>
+
+  <p class="lede">See <code>CONSOLE_REQUIREMENTS.html</code> for the formal numbered requirements. This phase splits into 4a / 4b / 4c per <code>ADMIN_CONSOLE.md</code> §10.</p>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P4 · W8-W9</span>
+        <span class="name">Admin console</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip fe">FE</span><span class="role-chip be">BE × 1</span><span class="role-chip qa">QA</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <h5>4a · W8 first half — shell + read-only screens</h5>
+      <ul class="check">
+        <li>Next.js 14+ app scaffold, Tailwind v4, shadcn/ui</li>
+        <li>OIDC sign-in via Auth.js (Keycloak adapter as reference)</li>
+        <li>Routes: <code>/</code> health, <code>/packs</code>, <code>/packs/:slug/overview</code>, <code>/llm</code> (read-only)</li>
+        <li>TanStack Query for server-state; TanStack Table for catalogues</li>
+        <li>Theme tokens from active pack; chrome stays neutral</li>
+      </ul>
+      <h5>4b · W8 second half — tools + use cases</h5>
+      <ul class="check">
+        <li><code>/tools</code> catalogue with test-invoke panel (form-rendered from JSON Schema via Zod)</li>
+        <li><code>/use-cases</code> registry view with versions + tool deps</li>
+        <li>Pack-scoped tool view: <code>/packs/:slug/tools</code></li>
+      </ul>
+      <h5>4c · W9 — audit + KB + admin</h5>
+      <ul class="check">
+        <li><code>/audit</code> list + <code>/audit/:correlation_id</code> event tree</li>
+        <li><code>/packs/:slug/kb</code> browser + upload + reindex</li>
+        <li><code>/admin/users</code>, <code>/admin/log</code>, <code>/admin/settings</code></li>
+        <li>Prompts view (read-only, no editing)</li>
+        <li>Tag <code>v0.4.0</code>; image to GHCR</li>
+      </ul>
+
+      <h5>Acceptance criteria</h5>
+      <ul class="check">
+        <li>Lighthouse a11y ≥ 95 on every public route</li>
+        <li>Playwright smoke: each top-level route signed-in + signed-out</li>
+        <li>Pack-scoped operator (scope <code>agi:operator:telco-demo</code>) cannot access <code>/packs/bluemarble/*</code></li>
+        <li>First paint &lt; 1s on cable; bundle size &lt; 250 KB gzipped</li>
+        <li>Image size &lt; 60 MB</li>
+        <li>Every write action shows up in <code>/admin/log</code> within 1s</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 5 ============ -->
+<section id="phase5">
+  <h2><span class="num">§ 4.5</span>Phase 5 · Reference packs + Helm <span class="pill warn" style="margin-left:8px">Band 2</span></h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P5 · W10-W11</span>
+        <span class="name">Reference packs + production Helm chart + hotfix workflow</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip be">BE × 1</span><span class="role-chip ds">Ops</span><span class="role-chip qa">QA</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li><code>packs/telco-demo/</code> — vendor-neutral telco pack: KB, tools, scenarios, prompts</li>
+            <li><code>packs/fleet-demo/</code> — vendor-neutral fleet pack (second vertical)</li>
+            <li><code>distribution/agi-chart/</code> — Helm chart with <code>BASE_PATH</code> subdir routing, ConfigMap-mounted packs, OTel collector wired</li>
+            <li>Single-pack hardening values flag</li>
+            <li>kind cluster CI workflow (deploys chart, runs smoke, tears down)</li>
+            <li><code>.github/workflow-templates/pack-hotfix.yml</code> — reusable CI template for pack repos</li>
+            <li>Docs pass: getting-started, packs, tools, llm-providers, auth, deploy, hotfix</li>
+            <li>Tag <code>v0.5.0</code>; chart published as OCI artifact to GHCR</li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li>External evaluator follows getting-started in &lt; 60 minutes from clone to first <code>/chat</code></li>
+            <li>kind CI: chart deploys, smoke /chat against fake LLM passes, in &lt; 4 min</li>
+            <li>Hotfix template runs against a sample pack repo: PR merge → image push → rollout, end-to-end in &lt; 15 min</li>
+            <li>Both reference packs ship full deflect-resolve-escalate scenarios</li>
+            <li>Charts pass <code>helm lint</code> and <code>kubeval</code> against k8s 1.30+</li>
+          </ul>
+          <div class="gate">
+            <strong>Phase gate 3</strong>
+            <p>End of W11. TL + Ops sign off. If not green, v1.0 cut slips.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 6 ============ -->
+<section id="phase6">
+  <h2><span class="num">§ 4.6</span>Phase 6 · Retrofit + v1.0 cut</h2>
+
+  <div class="phase">
+    <div class="phase-head">
+      <div class="title">
+        <span class="id">P6 · W12-W14</span>
+        <span class="name">Retrofit care-intelligence, harden, announce</span>
+      </div>
+      <div>
+        <span class="role-chip tl">TL</span><span class="role-chip be">BE × 2</span><span class="role-chip qa">QA</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-grid">
+        <div>
+          <h5>Deliverables</h5>
+          <ul class="check">
+            <li>Port <code>care-intelligence</code> backend to consume <code>agi-sdk</code> + <code>sdk.orchestrators.langgraph</code> (it already uses LangGraph)</li>
+            <li>Concrete migration plan doc for <code>bm-ai-platform</code> → <code>agi-sdk</code></li>
+            <li>Security review: SBOM, secret scanning, dependabot config, threat model document</li>
+            <li>Perf baseline: <code>/chat</code> p50/p95/p99 against fake-LLM; document numbers</li>
+            <li>SLA-class docs: observability runbook, incident playbook, security disclosure</li>
+            <li>v1.0 tag across all packages; production-published to PyPI + GHCR</li>
+            <li>Announcement blog post / README update</li>
+          </ul>
+        </div>
+        <div>
+          <h5>Acceptance criteria</h5>
+          <ul class="check">
+            <li>Retrofit: care-intelligence dev environment runs on agi-sdk; 3 demo scenarios pass via Playwright</li>
+            <li>No regression in care-intelligence AI-Trail contents — same correlation_id events, same shape</li>
+            <li>Security review sign-off: no high/critical findings</li>
+            <li>Perf baseline numbers documented for the next team</li>
+            <li>v1.0 announce: at least 3 external evaluators have run the getting-started successfully</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CADENCE ============ -->
+<section id="cadence">
+  <h2><span class="num">§ 5</span>Cadence &amp; rituals</h2>
+
+  <table>
+    <thead><tr><th>Ritual</th><th>Frequency</th><th>Who</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td>Daily async standup</td><td>Daily</td><td>All</td><td>3-line status in Slack thread</td></tr>
+      <tr><td>Weekly demo</td><td>Friday</td><td>All + project owner</td><td>30-min: show what shipped, what's next</td></tr>
+      <tr><td>Phase gate review</td><td>End of P1, P3, P5</td><td>TL + project owner + QA</td><td>Gate decision: green / amber / red</td></tr>
+      <tr><td>Architecture council</td><td>Weekly during P1–P2</td><td>TL + BE</td><td>Decisions logged in <code>docs/decisions/ADR-NNN.md</code></td></tr>
+      <tr><td>Security review</td><td>End of P5</td><td>External (or internal-with-distance)</td><td>SECURITY_REVIEW.md</td></tr>
+      <tr><td>Open-source check</td><td>Weekly</td><td>QA</td><td>Confirm zero Comviva-internal references; SBOM diff</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Branch + release strategy</h3>
+  <ul>
+    <li><strong>Trunk-based</strong>: short-lived feature branches off <code>main</code>; squash-merge.</li>
+    <li><strong>Release tags</strong> at every phase milestone: <code>vX.Y.Z</code>.</li>
+    <li><strong>Canary on TestPyPI</strong> for <code>agi-sdk</code>; promote to PyPI on phase-gate approval.</li>
+    <li><strong>Conventional commits</strong> for changelog generation.</li>
+  </ul>
+</section>
+
+<!-- ============ RISK REGISTER ============ -->
+<section id="risks">
+  <h2><span class="num">§ 6</span>Risk register</h2>
+
+  <table>
+    <thead><tr><th>#</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>R-01</td>
+        <td>Comviva-internal code leaks into OSS repo</td>
+        <td>Medium</td>
+        <td>High</td>
+        <td>Isolation gate + secret scan + 100% PR review for first 90 days; weekly OSS-check ritual</td>
+        <td>QA</td>
+      </tr>
+      <tr>
+        <td>R-02</td>
+        <td>LangChain Inc. tightens LangGraph commercial moat mid-build</td>
+        <td>Low</td>
+        <td>Medium</td>
+        <td>Two blessed orchestrators (incl. Pydantic-AI fallback); watch <code>langgraph-api</code> release notes</td>
+        <td>TL</td>
+      </tr>
+      <tr>
+        <td>R-03</td>
+        <td>Tenant pack data leak via header bypass</td>
+        <td>Low</td>
+        <td>Critical</td>
+        <td>Claims-based <code>X-Pack</code> dispatch enforced at runtime; fuzz test in CI</td>
+        <td>BE</td>
+      </tr>
+      <tr>
+        <td>R-04</td>
+        <td>Helm chart never tested against real ingress; surprises at customer site</td>
+        <td>Medium</td>
+        <td>High</td>
+        <td>kind CI in P5; one real-customer dry-run before v1.0</td>
+        <td>Ops</td>
+      </tr>
+      <tr>
+        <td>R-05</td>
+        <td>OpenAPI dialect variance breaks agi-mcpfyer at adopter site</td>
+        <td>Medium</td>
+        <td>Medium</td>
+        <td>Document supported dialects; ship 3+ reference OpenAPI specs in tests</td>
+        <td>BE</td>
+      </tr>
+      <tr>
+        <td>R-06</td>
+        <td>Open OSS questions (repo loc, name, eval) not resolved by W1</td>
+        <td>Medium</td>
+        <td>High (blocks P0)</td>
+        <td>Project owner decision required by W0; fallback: working title + named placeholder org</td>
+        <td>Project owner</td>
+      </tr>
+      <tr>
+        <td>R-07</td>
+        <td>P6 retrofit reveals SDK is wrong shape</td>
+        <td>Low</td>
+        <td>High</td>
+        <td>Retrofit-don't-greenfield rule means SDK adapts, not consumer; budget 1 week buffer in W14</td>
+        <td>TL</td>
+      </tr>
+      <tr>
+        <td>R-08</td>
+        <td>Frontend headcount unavailable in P4</td>
+        <td>Medium</td>
+        <td>Medium (slip)</td>
+        <td>UI is in Band 2 — slip does not block <code>pip install agi-sdk</code> story; can push to v1.1</td>
+        <td>Project owner</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ DEPENDENCIES ============ -->
+<section id="deps">
+  <h2><span class="num">§ 7</span>External dependencies &amp; blockers</h2>
+
+  <table>
+    <thead><tr><th>Dep</th><th>Needed by</th><th>Owner</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>GitHub org decision</td><td>P0 W1</td><td>Project owner</td><td>Pending</td></tr>
+      <tr><td>Final project name (trademark check)</td><td>P0 W1</td><td>Project owner + legal</td><td>Pending</td></tr>
+      <tr><td>PyPI namespace reservation (3 packages)</td><td>P0 W1</td><td>TL</td><td>Pending — depends on name</td></tr>
+      <tr><td>Apache-2.0 license sign-off</td><td>P0 W1</td><td>Project owner + legal</td><td>Intent confirmed; final sign-off pending</td></tr>
+      <tr><td>Eval harness depth (Promptfoo direct vs wrapper)</td><td>P5 W11</td><td>Project owner</td><td>Open</td></tr>
+      <tr><td>Real-customer dry-run venue for Helm</td><td>P5 W11</td><td>Field engineering</td><td>Identify candidate by W8</td></tr>
+      <tr><td>External evaluators (≥ 3) for v1.0 sign-off</td><td>P6 W14</td><td>TL</td><td>Recruit during P5</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Blockers vs nice-to-haves</h3>
+  <div class="grid">
+    <div class="card" style="border-left:3px solid var(--bad)">
+      <h4 style="color:var(--bad)">Blockers</h4>
+      <p>GitHub org · final name · Apache-2.0 sign-off. All three must land in W1 or P0 slips.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--warn)">
+      <h4 style="color:var(--warn)">Important but not blockers</h4>
+      <p>Eval harness depth (can stub in P5); real-customer dry-run (can run post-v1.0); v1.0 evaluator recruitment.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--good)">
+      <h4 style="color:var(--good)">Nice-to-haves</h4>
+      <p>Bitbucket mirror; CLA; Helm chart Helm Hub listing; Promptfoo wrapper.</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  v1 · 2026-05-22 · <code>office/project-agi/EXECUTION_PLAN.html</code> · Companions: <code>PLAN.html</code> · <code>DESIGN.html</code> · <code>RESOLVED_STACK.md</code> · <code>CONSOLE_REQUIREMENTS.html</code>
+</div>
+
+</div>
+</body>
+</html>

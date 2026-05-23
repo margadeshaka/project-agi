@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agi-mcpfyer"
+version = "0.2.0-dev"
+description = "OpenAPI 3 → MCP tool bundle generator. Build-time, first-class — ships a runnable MCP server from any OpenAPI spec."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [
+    { name = "project-agi contributors" },
+]
+keywords = ["agi", "mcp", "openapi", "tool-generation", "code-generation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Code Generators",
+]
+
+dependencies = [
+    "pydantic>=2",
+    "pyyaml",
+    "httpx",
+    "openapi-spec-validator",
+    "mcp",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "mypy",
+    "ruff",
+    "types-PyYAML",
+]
+
+[project.scripts]
+agi-mcpfyer = "agi_mcpfyer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agi_mcpfyer"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true

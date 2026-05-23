@@ -1,0 +1,29 @@
+{# SPDX-FileCopyrightText: 2026 project-agi contributors #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+{#
+  Deflect prompt — KB-only resolution path. No autonomous tool calls
+  besides kb.search are expected.
+
+  Context variables:
+    customer_question: string
+    kb_excerpts: list[ {title, snippet, url} ]
+#}
+The customer asked:
+
+  "{{ customer_question }}"
+
+You have the following knowledge-base excerpts. Use them, and them only,
+to answer. Do not assert anything you cannot back from these excerpts.
+
+{% for excerpt in kb_excerpts | default([]) -%}
+[{{ loop.index }}] {{ excerpt.title }}
+{{ excerpt.snippet }}
+({{ excerpt.url | default("kb://internal") }})
+
+{% endfor %}
+
+If the excerpts do not cover the question, say so and offer to open a
+ticket. Do not call any non-KB tool in this turn.
+
+Write a reply of at most 4 sentences in plain language. End with a single
+follow-up question that confirms the customer's issue is resolved.

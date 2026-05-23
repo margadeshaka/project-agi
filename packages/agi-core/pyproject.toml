@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agi-core"
+version = "0.2.0-dev"
+description = "project-agi Intelligence Core — registry, hub proxy, and shared HTTP surface fronting MCP tool bundles."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [
+    { name = "project-agi contributors" },
+]
+keywords = ["agi", "mcp", "hub", "registry", "fastapi"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: FastAPI",
+]
+
+dependencies = [
+    "agi-sdk",
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pyyaml",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "mypy",
+    "ruff",
+    "httpx",
+    "types-PyYAML",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agi_core"]
+
+[tool.uv.sources]
+agi-sdk = { workspace = true }
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true

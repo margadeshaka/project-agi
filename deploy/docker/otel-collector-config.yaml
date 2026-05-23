@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+# OTel collector — minimal pipeline. Production overrides land in P3 proper.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+exporters:
+  debug:
+    verbosity: basic
+  # Langfuse exporter is OTLP/HTTP — wire in P3 proper.
+  # otlphttp/langfuse:
+  #   endpoint: http://langfuse:3000/api/public/otel
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

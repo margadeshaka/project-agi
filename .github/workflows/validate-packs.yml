@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# validate-packs — every pack.yaml under packs/ is loaded with the SDK,
+# every referenced prompt/KB file is resolved, and every scenario JSON is
+# parsed. The workflow fails fast on any drift.
+
+name: validate-packs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packs/**"
+      - "packages/agi-sdk/**"
+      - ".github/workflows/validate-packs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packs/**"
+      - "packages/agi-sdk/**"
+      - ".github/workflows/validate-packs.yml"
+
+jobs:
+  validate:
+    name: validate every pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --all-packages
+
+      - name: Load every pack with the SDK
+        run: |
+          uv run python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          from agi.packs import load_pack
+
+          packs_root = Path("packs")
+          if not packs_root.is_dir():
+              print("no packs/ dir")
+              sys.exit(0)
+
+          failures: list[str] = []
+          for pack_yaml in sorted(packs_root.glob("*/pack.yaml")):
+              pack_dir = pack_yaml.parent
+              try:
+                  pack = load_pack(pack_dir)
+              except Exception as exc:
+                  failures.append(f"{pack_dir}: load failed: {exc!r}")
+                  continue
+
+              # Verify referenced prompt files exist (role_bindings).
+              role_bindings = pack.metadata.get("role_bindings", {}) if pack.metadata else {}
+              expected_paths: list[Path] = []
+              if isinstance(role_bindings, dict):
+                  sp = role_bindings.get("system_prompt")
+                  if isinstance(sp, str):
+                      expected_paths.append(pack_dir / sp)
+                  scenarios = role_bindings.get("scenarios", {})
+                  if isinstance(scenarios, dict):
+                      for v in scenarios.values():
+                          if isinstance(v, str):
+                              expected_paths.append(pack_dir / v)
+              for sc in pack.metadata.get("scenarios", []) if pack.metadata else []:
+                  if isinstance(sc, str):
+                      expected_paths.append(pack_dir / sc)
+              for ref in expected_paths:
+                  if not ref.exists():
+                      failures.append(f"{pack_dir}: missing referenced file {ref}")
+
+              # KB articles — at least one .md if kb/ is present.
+              if pack.kb_dir is not None:
+                  if not any(pack.kb_dir.glob("*.md")):
+                      failures.append(f"{pack_dir}: kb/ is present but empty")
+
+              # Scenario JSON parses + has required keys.
+              for sc in (pack_dir / "scenarios").glob("*.scenario.json"):
+                  try:
+                      data = json.loads(sc.read_text())
+                  except Exception as exc:
+                      failures.append(f"{sc}: not valid JSON: {exc!r}")
+                      continue
+                  for key in ("schema_version", "slug", "pack", "category", "expected_events"):
+                      if key not in data:
+                          failures.append(f"{sc}: missing key {key!r}")
+
+              print(f"ok: {pack_dir} (slug={pack.slug}, tools={len(pack.tool_allowlist)})")
+
+          if failures:
+              for f in failures:
+                  print(f"::error::{f}")
+              sys.exit(1)
+          PY
