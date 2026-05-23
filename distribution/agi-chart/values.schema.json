@@ -227,7 +227,15 @@
     "tests": {
       "type": "object",
       "properties": {
-        "image": { "type": "object" }
+        "image": { "type": "object" },
+        "chatRoundtrip": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "xPack": { "type": "string", "minLength": 1 },
+            "bearerToken": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
     "extraEnv": { "type": "array" },

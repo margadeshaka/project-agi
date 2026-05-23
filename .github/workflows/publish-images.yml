@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# publish-images — build agi-runtime + agi-ui container images and push to
+# ghcr.io. Tags applied:
+#
+#   * push to main           → ghcr.io/<owner>/<image>:main, :sha-<7>, :latest
+#   * tag v*                 → ghcr.io/<owner>/<image>:<version>, :sha-<7>, :latest
+#   * workflow_dispatch      → ghcr.io/<owner>/<image>:manual-<sha-<7>>
+#
+# Caching uses GHA's docker layer cache so repeat builds are fast. The job
+# fans out runtime + ui as a matrix so an image-side failure surfaces clearly.
+#
+# Permissions required on the repo:
+#   - Settings → Actions → General → Workflow permissions: Read + write
+#   - Settings → Packages: allow GHCR for this repo
+#
+# First-run: you may need to make the package public via
+#   Settings → Packages → <image> → Package settings → Change visibility.
+
+name: publish-images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag_suffix:
+        description: "Extra tag suffix (e.g. 'rc1')"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: build-and-push (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: agi-runtime
+            context: .
+            dockerfile: distribution/agi-runtime/Dockerfile
+          - image: agi-ui
+            context: distribution/agi-ui
+            dockerfile: distribution/agi-ui/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            latest=auto
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+          platforms: linux/amd64
+          # Multi-arch (linux/arm64) is deferred — agi-runtime depends on
+          # litellm wheels that don't ship arm64-native for every version.
+
+      - name: Summarise pushed tags
+        run: |
+          echo "Pushed image: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}"
+          echo "Tags:"
+          echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | sed 's/^/  - /'

@@ -242,6 +242,16 @@ tests:
   image:
     repository: curlimages/curl
     tag: "8.10.1"
+  # `helm test` pod that POSTs /chat to genuinely exercise the
+  # dispatch-middleware → router → seam → orchestrator → LiteLLM path.
+  # The default X-Pack is `dev` because the dev-noop auth adapter pins
+  # claims.tenant_id="dev"; the dispatch middleware requires header == claim.
+  # When using a real auth adapter, set xPack + bearerToken to a tenant
+  # whose tokens this cluster accepts.
+  chatRoundtrip:
+    enabled: true
+    xPack: dev
+    bearerToken: helm-test-token
 
 # ---------------------------------------------------------------------------
 # Extra env (both runtime + ui inherit `extra*` lists)

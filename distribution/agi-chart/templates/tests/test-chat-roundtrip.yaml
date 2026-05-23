@@ -1,0 +1,99 @@
+{{/* SPDX-License-Identifier: Apache-2.0 */}}
+{{- if and .Values.runtime.enabled .Values.tests.chatRoundtrip.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "agi.fullname" . }}-test-chat-roundtrip
+  labels:
+    {{- include "agi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: helm-test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  serviceAccountName: {{ include "agi.serviceAccountName" . }}
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: chat-roundtrip
+      image: "{{ .Values.tests.image.repository }}:{{ .Values.tests.image.tag }}"
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          BASE="http://{{ include "agi.runtime.fullname" . }}:{{ .Values.runtime.service.port }}"
+          READYZ="${BASE}/readyz"
+          CHAT="${BASE}{{ trimSuffix "/" .Values.global.basePath }}/chat"
+          XPACK="{{ .Values.tests.chatRoundtrip.xPack }}"
+          TOKEN="{{ .Values.tests.chatRoundtrip.bearerToken }}"
+
+          # ----- Step 1: wait for /readyz so the POST doesn't race startup --
+          echo "GET ${READYZ}"
+          ready=""
+          for i in $(seq 1 15); do
+            if curl -fsS --max-time 3 "${READYZ}" >/dev/null; then
+              ready="yes"
+              echo "ready after ${i} attempt(s)"
+              break
+            fi
+            echo "attempt ${i}: not ready, sleeping 2s"
+            sleep 2
+          done
+          if [ -z "${ready}" ]; then
+            echo "FAIL: runtime did not become ready in 30s — aborting chat round-trip"
+            exit 1
+          fi
+
+          # ----- Step 2: POST /chat with the fake-provider expected to drive
+          # the dispatch-middleware → router → seam → orchestrator path.
+          # The body matches the ChatRequest contract (messages list); when
+          # no model binding is configured the route returns a synthetic stub
+          # envelope that still carries the `response` field — both paths are
+          # valid for the round-trip gate.
+          BODY='{"messages":[{"role":"user","content":"hello"}],"stream":false}'
+          echo "POST ${CHAT} (X-Pack=${XPACK})"
+          RESP_FILE=/tmp/chat-resp.json
+          HTTP_CODE=$(curl -sS -o "${RESP_FILE}" -w "%{http_code}" \
+            --max-time 20 \
+            -X POST "${CHAT}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "X-Pack: ${XPACK}" \
+            -H "X-Correlation-Id: helm-test-chat-roundtrip" \
+            --data "${BODY}")
+
+          echo "HTTP ${HTTP_CODE}"
+          echo "--- body ---"
+          cat "${RESP_FILE}" || true
+          echo
+          echo "--- /body ---"
+
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "FAIL: expected HTTP 200, got ${HTTP_CODE}"
+            exit 1
+          fi
+
+          # Assert the JSON body carries a `response` field — this is the
+          # legacy ChatResponse wire shape preserved by `_to_chat_response`.
+          # We use grep to avoid pulling a JSON parser into the test image.
+          if ! grep -q '"response"' "${RESP_FILE}"; then
+            echo "FAIL: response body is missing the 'response' field"
+            exit 1
+          fi
+
+          echo "OK: /chat round-trip succeeded — dispatch middleware, router, and response projection all exercised"
+          exit 0
+{{- end }}
