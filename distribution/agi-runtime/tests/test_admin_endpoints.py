@@ -534,3 +534,172 @@ def test_llm_providers_returns_ready_in_test_env(configured: TestClient) -> None
         headers=_hdr("telco-demo"),
     )
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# /admin/kb/{slug}/reindex — JSON (sync) + SSE progress stream
+# ---------------------------------------------------------------------------
+
+
+def _parse_sse_events(body: str) -> list[tuple[str, dict]]:
+    """Tiny SSE parser: turn the raw body into ``[(event_name, data_dict), ...]``."""
+    import json as _json
+
+    out: list[tuple[str, dict]] = []
+    event_name = "message"
+    data_lines: list[str] = []
+    for line in body.split("\n"):
+        if line == "":
+            if data_lines:
+                try:
+                    payload = _json.loads("\n".join(data_lines))
+                except _json.JSONDecodeError:
+                    payload = {}
+                out.append((event_name, payload))
+            event_name = "message"
+            data_lines = []
+            continue
+        if line.startswith("event:"):
+            event_name = line[len("event:") :].strip()
+        elif line.startswith("data:"):
+            data_lines.append(line[len("data:") :].strip())
+    return out
+
+
+def test_reindex_json_default_response(configured: TestClient) -> None:
+    """Regression: no ``Accept: text/event-stream`` → legacy synchronous JSON."""
+    resp = configured.post(
+        "/admin/kb/telco-demo/reindex",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["pack"] == "telco-demo"
+    assert body["reindex_queued"] is True
+    assert body["correlation_id"]
+    # Shape stays byte-for-byte stable — no SSE-only fields leaking into JSON.
+    assert set(body.keys()) == {"pack", "reindex_queued", "correlation_id"}
+
+
+def test_reindex_json_with_application_json_accept(configured: TestClient) -> None:
+    """``Accept: application/json`` still routes to the sync JSON envelope."""
+    resp = configured.post(
+        "/admin/kb/telco-demo/reindex",
+        headers={
+            **_hdr("telco-demo", "agi:admin"),
+            "Accept": "application/json",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["reindex_queued"] is True
+
+
+def test_reindex_sse_emits_start_progress_complete(configured: TestClient) -> None:
+    """SSE path emits a ``start``, one+ ``progress``, and one ``complete``."""
+    headers = {
+        **_hdr("telco-demo", "agi:admin"),
+        "Accept": "text/event-stream",
+    }
+    with configured.stream(
+        "POST",
+        "/admin/kb/telco-demo/reindex",
+        headers=headers,
+    ) as resp:
+        assert resp.status_code == 200, resp.read().decode()
+        assert "text/event-stream" in resp.headers["content-type"]
+        body = resp.read().decode("utf-8")
+
+    events = _parse_sse_events(body)
+    names = [name for name, _ in events]
+    assert "start" in names, names
+    assert names.count("progress") >= 1, names
+    assert names[-1] == "complete", names
+
+    start = next(payload for name, payload in events if name == "start")
+    assert start["slug"] == "telco-demo"
+    assert start["started_iso"]
+
+    progress = [payload for name, payload in events if name == "progress"]
+    assert progress[0]["percent"] == 0
+    assert progress[-1]["percent"] == 100
+    for tick in progress:
+        assert tick["slug"] == "telco-demo"
+        assert "articles_done" in tick
+        assert "articles_total" in tick
+        # FE kb-browser.tsx reads ``progress`` directly off the data line.
+        assert isinstance(tick["progress"], int)
+
+    complete = next(payload for name, payload in events if name == "complete")
+    assert complete["slug"] == "telco-demo"
+    assert complete["completed_iso"]
+    assert "articles_indexed" in complete
+    assert complete["correlation_id"]
+    # FE also checks ``done`` to fire its success toast.
+    assert complete["done"] is True
+
+
+def test_reindex_sse_non_admin_403(configured: TestClient) -> None:
+    """Viewer / operator / bare-caller all 403 — consistent with the JSON path."""
+    for scope_args in (
+        ("agi:viewer",),
+        ("agi:operator:telco-demo",),
+        (),
+    ):
+        resp = configured.post(
+            "/admin/kb/telco-demo/reindex",
+            headers={
+                **_hdr("telco-demo", *scope_args),
+                "Accept": "text/event-stream",
+            },
+        )
+        assert resp.status_code == 403, f"scope={scope_args} got {resp.status_code}"
+
+
+def test_reindex_sse_unknown_pack_emits_error_event_or_500(configured: TestClient) -> None:
+    """Decision: unknown pack returns 404 BEFORE the stream opens.
+
+    The alternative is to open the stream then emit a single ``event: error``
+    frame — but mid-stream errors are harder for the FE SSE reader to surface
+    (kb-browser.tsx is inside its ``while (true) reader.read()`` loop when the
+    frame would arrive). A pre-stream 404 lets the FE's ``catch`` branch hit
+    ``RuntimeError`` and toast normally, matching how every other admin
+    endpoint reports missing packs. This test pins that contract.
+    """
+    resp = configured.post(
+        "/admin/kb/ghost-pack/reindex",
+        headers={
+            **_hdr("telco-demo", "agi:admin"),  # X-Pack must match the bearer tenant
+            "Accept": "text/event-stream",
+        },
+    )
+    assert resp.status_code == 404, resp.text
+    detail = resp.json().get("detail", "")
+    assert "ghost-pack" in detail
+
+
+def test_reindex_writes_admin_log_event(configured: TestClient) -> None:
+    """``_log_admin`` still fires for both JSON and SSE paths; ``sse`` flag distinguishes."""
+    sink = configured.app.state.runtime.admin_sink
+    before = len(getattr(sink, "events", []))
+
+    # JSON path
+    configured.post(
+        "/admin/kb/telco-demo/reindex",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    # SSE path (drain stream so the generator completes)
+    with configured.stream(
+        "POST",
+        "/admin/kb/telco-demo/reindex",
+        headers={
+            **_hdr("telco-demo", "agi:admin"),
+            "Accept": "text/event-stream",
+        },
+    ) as resp:
+        resp.read()
+
+    events = list(getattr(sink, "events", []))[before:]
+    kb_events = [e for e in events if e.get("event_type") == "admin.kb_reindex"]
+    assert len(kb_events) >= 2
+    sse_flags = sorted(e["payload"]["sse"] for e in kb_events)
+    assert sse_flags == [False, True]

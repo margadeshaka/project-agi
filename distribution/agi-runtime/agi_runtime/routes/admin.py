@@ -12,12 +12,15 @@ reconstruct who-did-what.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, AsyncIterator
 
 from agi.trail import new_event
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from agi_runtime import __version__ as runtime_version
 from agi_runtime.state import RuntimeState
@@ -100,15 +103,137 @@ async def reload_pack(slug: str, request: Request) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# KB reindex — JSON (sync) or SSE progress stream
+# ---------------------------------------------------------------------------
+
+
+_REINDEX_TICK_SECONDS = 0.05  # small delay between SSE ticks; tests rely on it staying small
+_REINDEX_TICKS = (0, 25, 50, 75, 100)  # 3–5 ticks per ADMIN_CONSOLE.md §3.4
+
+
+def _wants_sse(request: Request) -> bool:
+    """Did the caller ask for ``text/event-stream`` in the ``Accept`` header?"""
+    accept = request.headers.get("accept", "")
+    return "text/event-stream" in accept.lower()
+
+
+def _count_kb_articles(pack: Any) -> int:
+    """Count ``.md``/``.json``/``.txt`` files under ``pack.kb_dir`` (zero if missing)."""
+    kb_dir = getattr(pack, "kb_dir", None)
+    if kb_dir is None or not kb_dir.is_dir():
+        return 0
+    total = 0
+    for path in kb_dir.rglob("*"):
+        if path.is_file() and path.suffix in {".md", ".markdown", ".json", ".txt"}:
+            total += 1
+    return total
+
+
+def _sse_frame(event: str, data: dict[str, Any]) -> bytes:
+    """Encode a single SSE event/data pair as bytes."""
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n".encode("utf-8")
+
+
 @router.post("/kb/{slug}/reindex")
-async def reindex_kb(slug: str, request: Request) -> dict[str, Any]:
+async def reindex_kb(slug: str, request: Request) -> Any:
+    """Trigger a KB reindex.
+
+    Two response modes share this handler:
+
+    * **JSON (default)** — no ``Accept: text/event-stream``; returns the
+      synchronous ``{pack, reindex_queued, correlation_id}`` envelope. This is
+      the legacy shape the FE poll fallback consumes byte-for-byte.
+    * **SSE** — ``Accept: text/event-stream``; returns a ``StreamingResponse``
+      that emits ``start`` / ``progress`` (3–5 ticks) / ``complete`` events.
+      On failure it emits a single ``error`` event then closes.
+
+    The real vector-store/Qdrant integration lands in P5–P6; v1 simulates
+    progress by ticking percentages over the article count so the FE
+    progress UI is exercised end-to-end.
+    """
     _require_admin(request)
-    await _log_admin(request, action="kb_reindex", payload={"slug": slug})
-    return {
-        "pack": slug,
-        "reindex_queued": True,
-        "correlation_id": request.state.correlation_id,
-    }
+
+    runtime: RuntimeState = request.app.state.runtime
+    pack = runtime.pack_loader.get(slug)
+    sse = _wants_sse(request)
+
+    # Decision: unknown pack → 404 *up-front*, even on the SSE path. We could
+    # alternatively open the stream then emit a single ``error`` event, but
+    # mid-stream errors are harder for the FE to surface (the SSE parser is
+    # already inside its reader loop). A pre-stream 404 lets the FE's catch
+    # branch hit ``RuntimeError`` and toast normally. Tests document this.
+    if pack is None:
+        await _log_admin(
+            request,
+            action="kb_reindex",
+            payload={"slug": slug, "sse": sse, "found": False},
+        )
+        raise HTTPException(status_code=404, detail=f"pack {slug!r} not loaded")
+
+    await _log_admin(request, action="kb_reindex", payload={"slug": slug, "sse": sse})
+
+    if not sse:
+        return {
+            "pack": slug,
+            "reindex_queued": True,
+            "correlation_id": request.state.correlation_id,
+        }
+
+    correlation_id = request.state.correlation_id
+    article_total = _count_kb_articles(pack)
+
+    async def _stream() -> AsyncIterator[bytes]:
+        try:
+            started_iso = datetime.now(timezone.utc).isoformat()
+            yield _sse_frame("start", {"slug": slug, "started_iso": started_iso})
+            for percent in _REINDEX_TICKS:
+                articles_done = (
+                    article_total if percent == 100 else (article_total * percent) // 100
+                )
+                yield _sse_frame(
+                    "progress",
+                    {
+                        "slug": slug,
+                        "percent": percent,
+                        "progress": percent,  # FE consumes ``progress`` directly
+                        "articles_done": articles_done,
+                        "articles_total": article_total,
+                    },
+                )
+                await asyncio.sleep(_REINDEX_TICK_SECONDS)
+            completed_iso = datetime.now(timezone.utc).isoformat()
+            yield _sse_frame(
+                "complete",
+                {
+                    "slug": slug,
+                    "completed_iso": completed_iso,
+                    "articles_indexed": article_total,
+                    # ``done`` + ``chunks`` keep the FE toast path happy
+                    # (kb-browser.tsx looks for these keys directly).
+                    "done": True,
+                    "chunks": article_total,
+                    "correlation_id": correlation_id,
+                },
+            )
+        except Exception as exc:  # noqa: BLE001 — stream must close cleanly
+            yield _sse_frame(
+                "error",
+                {
+                    "type": "about:blank",
+                    "title": "kb_reindex_failed",
+                    "detail": str(exc),
+                    "status": 500,
+                    "slug": slug,
+                    "correlation_id": correlation_id,
+                },
+            )
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"X-Correlation-Id": correlation_id},
+    )
 
 
 @router.get("/llm/bindings")
@@ -173,7 +298,8 @@ async def use_cases(request: Request) -> dict[str, Any]:
                 continue
             key = (name, version)
             entry = aggregated.get(key)
-            tool_list = uc.get("tools") if isinstance(uc.get("tools"), list) else []
+            raw_tools = uc.get("tools")
+            tool_list: list[Any] = raw_tools if isinstance(raw_tools, list) else []
             if entry is None:
                 aggregated[key] = {
                     "name": name,
