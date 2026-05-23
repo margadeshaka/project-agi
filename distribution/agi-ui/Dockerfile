@@ -10,8 +10,12 @@ FROM node:${NODE_VERSION}-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* ./
+# Don't pass --omit=optional: tailwind v4-alpha pulls in lightningcss,
+# whose musl native binary (lightningcss-linux-x64-musl) is registered as
+# an optional dependency. Without it `npm run build` crashes with
+# "Cannot find module '../lightningcss.linux-x64-musl.node'" on alpine.
 RUN if [ -f package-lock.json ]; then \
-      npm ci --omit=optional; \
+      npm ci; \
     else \
       npm install --no-audit --no-fund; \
     fi
