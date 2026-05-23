@@ -26,7 +26,7 @@
 # Add a "Trusted Publisher" with these fields:
 #
 #     PyPI Project Name:    agi-sdk            (or agi-core / agi-mcpfyer)
-#     Owner:                comviva-oss        (GitHub org/user that owns the repo)
+#     Owner:                margadeshaka      (GitHub org/user that owns the repo)
 #     Repository name:      project-agi
 #     Workflow filename:    publish-pypi.yml
 #     Environment name:     (leave blank — we don't gate on a GH environment yet)

@@ -14,7 +14,7 @@
  *    agi:admin                     → 'agi:admin'
  *    agi:viewer                    → 'agi:viewer'
  *    agi:dev                       → 'agi:dev'
- *    agi:operator:telco-demo       → 'agi:operator:telco-demo'
+ *    agi:operator:care-demo       → 'agi:operator:care-demo'
  *
  *  Why realm_access.roles and not a custom claim:
  *   - Stock Keycloak realm export works out-of-the-box; no protocol-mapper

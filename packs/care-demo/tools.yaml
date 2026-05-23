@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 project-agi contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# MCP tool allow-list for the telco-demo pack.
+# MCP tool allow-list for the care-demo pack.
 #
 # Runtime enforces this list at dispatch — a tool call to anything outside
 # this set returns a permission-denied trail event without ever hitting the

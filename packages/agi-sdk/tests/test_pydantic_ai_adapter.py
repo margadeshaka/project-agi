@@ -17,7 +17,7 @@ from agi.orchestrators.pydantic_ai import resolve_tools, set_pack_baggage  # noq
 
 
 def _pack(allow: list[str] | None = None) -> Pack:
-    return Pack(slug="telco-demo", version="0.1.0", tool_allowlist=allow or [])
+    return Pack(slug="care-demo", version="0.1.0", tool_allowlist=allow or [])
 
 
 class _FakeTool:
@@ -34,7 +34,7 @@ def test_set_pack_baggage_attaches_bm_keys() -> None:
     pack = _pack()
     ctx = set_pack_baggage(None, pack)
     assert ctx is not None
-    assert baggage.get_baggage("bm.pack", ctx) == "telco-demo"
+    assert baggage.get_baggage("bm.pack", ctx) == "care-demo"
     assert baggage.get_baggage("bm.pack.version", ctx) == "0.1.0"
 
 

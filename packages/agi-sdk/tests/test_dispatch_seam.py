@@ -114,7 +114,7 @@ def _make_binding() -> ModelBinding:
     return ModelBinding(role="reasoning", model_id="openai/gpt-4o-mini")
 
 
-def _make_pack(slug: str = "telco-demo") -> Pack:
+def _make_pack(slug: str = "care-demo") -> Pack:
     return Pack(slug=slug, version="0.1.0")
 
 
@@ -164,7 +164,7 @@ async def test_invoke_use_case_happy_path() -> None:
     assert response.response == "hi back"
     assert response.use_case == "dispatch_test_uc"
     assert response.use_case_version == "0.1.0"
-    assert response.pack == "telco-demo"
+    assert response.pack == "care-demo"
     assert response.correlation_id == "cid-happy"
     assert response.tenant_id == "t-happy"
     assert response.session_id == "sess-1"

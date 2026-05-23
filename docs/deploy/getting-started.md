@@ -37,7 +37,7 @@ pip install -e packages/agi-sdk
 A pack is a folder of YAML/J2/JSON describing one tenant's tools, prompts, KB, and model bindings. Copy one of the demonstrators, or start from the blank template:
 
 ```bash
-cp -r packs/telco-demo                  ./my-pack       # full-featured demo
+cp -r packs/care-demo                  ./my-pack       # full-featured demo
 # or
 cp -r packages/agi-packs/blank          ./my-pack       # empty skeleton
 ```
@@ -104,7 +104,7 @@ What you get:
 - `agi-runtime` on `http://localhost:9000` (FastAPI + MCP + claims-validated X-Pack dispatch)
 - `agi-ui` admin console on `http://localhost:8080`
 - MongoDB, Qdrant, Langfuse, OTel collector — all pre-wired
-- The bundled `packs/telco-demo` and `packs/fleet-demo` packs mounted into the runtime
+- The bundled `packs/care-demo` and `packs/fleet-demo` packs mounted into the runtime
 
 Verify:
 

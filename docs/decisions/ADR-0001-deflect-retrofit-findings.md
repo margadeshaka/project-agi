@@ -20,8 +20,8 @@ iPhone 15?"), the agent calls one tool (`search_knowledge_base`), the tool
 returns the matching article, the agent composes a personalised reply and
 the conversation closes — no ticket, no human.
 
-A faithful port lives at `.smoke/sdk_deflect_smoke.py`. It loads the
-BlueMarble KB seed directly from care-intelligence, uses
+A faithful port lives at `.smoke/sdk_deflect_smoke.py`. It loads a sample
+telco-operator KB seed (used as an early reference implementation), drives
 `run_use_case(...)` against the native orchestrator, and verifies the
 scenario's `expected_tool_sequence` and `expected_response_phrases` against
 the live llama3.2 reply.

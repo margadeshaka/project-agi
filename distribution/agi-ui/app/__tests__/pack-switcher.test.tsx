@@ -38,17 +38,17 @@ describe('PackSwitcher', () => {
       <AuthProvider initialUser={ADMIN as any}>
         <PackSwitcher
           available={[
-            { slug: 'telco-demo', display_name: 'Telco Demo' },
-            { slug: 'bluemarble', display_name: 'BlueMarble' },
+            { slug: 'care-demo', display_name: 'Care Demo' },
+            { slug: 'acme', display_name: 'Acme' },
           ]}
         />
       </AuthProvider>,
     );
 
     const select = screen.getByLabelText('Active pack') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'bluemarble' } });
+    fireEvent.change(select, { target: { value: 'acme' } });
 
-    expect(document.cookie).toContain(`${COOKIES.pack}=bluemarble`);
+    expect(document.cookie).toContain(`${COOKIES.pack}=acme`);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
@@ -63,14 +63,14 @@ describe('PackSwitcher', () => {
     const op = {
       subject: 'sub-op',
       email: 'op@example.test',
-      scopes: ['agi:operator:telco-demo'],
+      scopes: ['agi:operator:care-demo'],
     };
     render(
       <AuthProvider initialUser={op as any}>
-        <PackSwitcher available={[{ slug: 'telco-demo', display_name: 'Telco Demo' }]} />
+        <PackSwitcher available={[{ slug: 'care-demo', display_name: 'Care Demo' }]} />
       </AuthProvider>,
     );
     expect(screen.queryByLabelText('Active pack')).toBeNull();
-    expect(screen.getByText(/telco-demo/)).toBeInTheDocument();
+    expect(screen.getByText(/care-demo/)).toBeInTheDocument();
   });
 });

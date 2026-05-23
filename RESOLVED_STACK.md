@@ -124,7 +124,7 @@ These were resolved during R1/R2 by mutual concession; codifying:
 | `agi-sdk` | Python library; `sdk.{models, mcp, rag, prompts, config, serve, trail}` + optional `sdk.orchestrators.{langgraph, pydantic_ai}`. `Traceloop.init()` at boot. | The product. Pure Python; no FastAPI, no DB, no UI. |
 | `agi-core` | Tool registry, shared vector indexes, hub proxy. | Optional shared services. |
 | `agi-mcpfyer` | OpenAPI → MCP generator (versioned tool bundles). | First-class repo. Build-time. |
-| `agi-packs` | Pack spec + reference packs (`blank`, `telco-demo`, `fleet-demo`). | Reference content. Customer packs live elsewhere. |
+| `agi-packs` | Pack spec + reference packs (`blank`, `care-demo`, `fleet-demo`). | Reference content. Customer packs live elsewhere. |
 
 ### Band 2 — Reference Distribution (what Comviva field teams ship)
 

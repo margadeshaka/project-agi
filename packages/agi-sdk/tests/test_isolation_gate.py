@@ -5,10 +5,9 @@
 
 Bans two classes of imports:
 
-1. **Internal Comviva / framework legacy** — ``bm_ai``, ``bluemarble``,
-   ``bm_mcp``, and the distribution packages ``agi_runtime``, ``agi_ui``,
-   ``agi_auth``, ``agi_chart``. The SDK is the library; it must not pull in
-   the runtime or any internal legacy code.
+1. **Distribution packages (band-2)** — ``agi_runtime``, ``agi_ui``,
+   ``agi_auth``, ``agi_chart``. The SDK is band-1 (the library); it must
+   never pull in any band-2 distribution component.
 2. **Native LLM provider SDKs** — ``openai``, ``anthropic``, ``boto3``.
    Roles-not-providers (RESOLVED_STACK Decision 2): use cases call LiteLLM,
    never a native SDK.
@@ -24,10 +23,6 @@ from pathlib import Path
 
 # Modules the SDK must never reach for.
 BANNED_TOP_LEVEL = {
-    # Internal legacy / framework forks
-    "bm_ai",
-    "bluemarble",
-    "bm_mcp",
     # Distribution packages (band-2) — SDK is band-1, never the reverse
     "agi_runtime",
     "agi_ui",
@@ -39,8 +34,8 @@ BANNED_TOP_LEVEL = {
     "boto3",
 }
 
-# Banned namespace prefixes (dotted). A hit on `bluemarble.foo` should also
-# fail the gate, not just bare `import bluemarble`.
+# Banned namespace prefixes (dotted). A hit on `agi_runtime.foo` should also
+# fail the gate, not just bare `import agi_runtime`.
 BANNED_PREFIXES = tuple(BANNED_TOP_LEVEL)
 
 

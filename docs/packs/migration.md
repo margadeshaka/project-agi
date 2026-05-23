@@ -39,7 +39,7 @@ cd packs/<slug>
 ### 2. Edit `pack.yaml`
 
 Replace `blank` with `<slug>` and add the metadata block. Start from the
-shape in `packs/telco-demo/pack.yaml` — copy, then strip what you don't
+shape in `packs/care-demo/pack.yaml` — copy, then strip what you don't
 need:
 
 ```yaml
@@ -70,7 +70,7 @@ metadata:
 ### 3. Write `tools.yaml`
 
 Start with `kb.search` only — everything else gets added when a
-scenario actually needs it. Avoid copy-pasting the full telco-demo
+scenario actually needs it. Avoid copy-pasting the full care-demo
 allow-list; that's how leaky tool surfaces happen.
 
 ### 4. Create the prompt templates

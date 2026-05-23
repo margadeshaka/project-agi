@@ -1,15 +1,16 @@
 # SPDX-FileCopyrightText: 2026 project-agi contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# telco-demo — vendor-neutral telco reference pack.
+# care-demo — vendor-neutral customer-care reference pack.
 #
-# Bundles three demo scenarios (deflect / resolve / escalate) covering
-# the customer-care capability ladder for a generic mobile operator.
-# Used by docs, the e2e suite, and the kind cluster smoke test.
+# Bundles three demo scenarios (deflect / resolve / escalate) covering the
+# customer-care capability ladder for any subscription or service business
+# (SaaS, utility, membership, retail, finance, …). Used by docs, the e2e
+# suite, and the kind cluster smoke test.
 
-slug: telco-demo
+slug: care-demo
 version: 0.1.0
-name: Telco demo pack
+name: Customer care demo pack
 
 # Declared model role bindings — operator.yaml must map each of these to a
 # concrete model id. Mismatches surface at pack-load time.
@@ -19,11 +20,13 @@ models:
   - embedding
 
 metadata:
-  vertical: telco
-  display_name: Acme Mobile (demo)
+  vertical: customer-care
+  display_name: Acme Care (demo)
   description: >-
-    Reference telco-care pack used by the project-agi getting-started flow.
-    All copy is vendor-neutral; rebrand by editing this manifest and the KB.
+    Reference customer-care pack used by the project-agi getting-started
+    flow. Industry-neutral: any business that bills customers, activates
+    accounts, processes plan changes, refunds, and escalates to a
+    specialist team can adopt this pack as a starting point.
   theme:
     primary: "#0066CC"
     secondary: "#003366"
@@ -44,4 +47,4 @@ metadata:
     - scenarios/escalate.scenario.json
   contact:
     support_hours: "08:00-22:00 local time, 7 days a week"
-    handoff_queue: tier-2-mobile
+    handoff_queue: tier-2-care

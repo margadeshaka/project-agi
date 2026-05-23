@@ -49,7 +49,7 @@ describe('runtime-fetch', () => {
   });
 
   it('injects X-Pack from cookie', async () => {
-    document.cookie = `${COOKIES.pack}=telco-demo; path=/`;
+    document.cookie = `${COOKIES.pack}=care-demo; path=/`;
     let captured: CapturedRequest | null = null;
     mockFetch((req) => {
       const headers: Record<string, string> = {};
@@ -58,11 +58,11 @@ describe('runtime-fetch', () => {
       return jsonResponse({});
     });
     await runtimeFetch('/admin/packs');
-    expect(captured!.headers['x-pack']).toBe('telco-demo');
+    expect(captured!.headers['x-pack']).toBe('care-demo');
   });
 
   it('honours explicit pack override over cookie', async () => {
-    document.cookie = `${COOKIES.pack}=telco-demo; path=/`;
+    document.cookie = `${COOKIES.pack}=care-demo; path=/`;
     let captured: CapturedRequest | null = null;
     mockFetch((req) => {
       const headers: Record<string, string> = {};
@@ -70,8 +70,8 @@ describe('runtime-fetch', () => {
       captured = { url: req.url, headers, method: req.method };
       return jsonResponse({});
     });
-    await runtimeFetch('/admin/packs', { pack: 'bluemarble' });
-    expect(captured!.headers['x-pack']).toBe('bluemarble');
+    await runtimeFetch('/admin/packs', { pack: 'acme' });
+    expect(captured!.headers['x-pack']).toBe('acme');
   });
 
   it('injects Authorization: Bearer from explicit override', async () => {
@@ -92,19 +92,19 @@ describe('runtime-fetch', () => {
         {
           type: 'https://example.com/errors/bad-pack',
           title: 'Pack not found',
-          detail: 'telco-demo is not deployed',
+          detail: 'care-demo is not deployed',
           status: 404,
         },
         404,
         { 'Content-Type': 'application/problem+json' },
       ),
     );
-    await expect(runtimeFetch('/admin/packs/telco-demo')).rejects.toMatchObject({
+    await expect(runtimeFetch('/admin/packs/care-demo')).rejects.toMatchObject({
       name: 'RuntimeError',
       status: 404,
       problem: {
         title: 'Pack not found',
-        detail: 'telco-demo is not deployed',
+        detail: 'care-demo is not deployed',
       },
     });
   });

@@ -2,7 +2,7 @@
   "$comment": "SPDX-License-Identifier: Apache-2.0",
   "schema_version": 1,
   "slug": "telco-escalate",
-  "pack": "telco-demo",
+  "pack": "care-demo",
   "title": "Number-portability dispute — escalate to tier-2",
   "description": "Customer has a number-portability issue that exceeds autonomous authority. Assistant must summarise, open a ticket, and hand off.",
   "category": "escalate",

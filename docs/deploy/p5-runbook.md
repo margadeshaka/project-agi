@@ -11,7 +11,7 @@ project's "definition-of-done" can be reached.
 | Artefact | Path | Purpose |
 | --- | --- | --- |
 | `publish-images.yml` workflow | `.github/workflows/publish-images.yml` | Build + push `agi-runtime` and `agi-ui` to `ghcr.io/<owner>/<image>` on push-to-main, tag `v*`, and `workflow_dispatch`. Matrix-fanned for clean failure surfacing. |
-| `/chat` helm-test pod | `distribution/agi-chart/templates/tests/test-chat-roundtrip.yaml` | `helm test` now POSTs `/chat` with `X-Pack: telco-demo` + dev-noop auth and asserts the legacy `ChatResponse` shape. Proves dispatch-middleware → router → seam → orchestrator → LiteLLM-fake. |
+| `/chat` helm-test pod | `distribution/agi-chart/templates/tests/test-chat-roundtrip.yaml` | `helm test` now POSTs `/chat` with `X-Pack: care-demo` + dev-noop auth and asserts the legacy `ChatResponse` shape. Proves dispatch-middleware → router → seam → orchestrator → LiteLLM-fake. |
 | Existing `/readyz` helm-test pod | `distribution/agi-chart/templates/tests/test-runtime-readiness.yaml` | unchanged from P4. |
 | `helm-kind.yml` workflow | `.github/workflows/helm-kind.yml` | already has `workflow_dispatch: {}` from chore commit `73f05fc`; ready to fire on `main`. |
 

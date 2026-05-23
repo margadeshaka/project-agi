@@ -1,6 +1,6 @@
 # project-agi — admin console (agi-ui) design
 
-**Owner:** hitesh.gupta@comviva.com
+**Owner:** project-agi maintainers
 **Created:** 2026-05-22
 **Status:** Draft for review
 **Maps to:** `PLAN.html` § 11 Phase 4 (Optional admin UI)
@@ -12,7 +12,7 @@
 
 ### What this UI is
 
-A **minimal, opinionated operator console** for a `project-agi` deployment. It exists for the operator (the person standing up the stack at a customer site) and the platform admin (the Comviva delivery engineer), not the end user of the agent.
+A **minimal, opinionated operator console** for a `project-agi` deployment. It exists for the operator (the person standing up the stack at a customer site) and the platform admin (the delivery engineer), not the end user of the agent.
 
 > "Day-to-day trace work is in Langfuse. Day-to-day eval work is in Promptfoo CLI. The admin console handles everything those tools don't."
 
@@ -107,7 +107,7 @@ The landing page. Tells you in one glance whether the deployment is operating.
 │                                                                     │
 │  Packs deployed: 3                                                  │
 │    bluemarble  · 6 tools  · 41 KB articles  · KB last reindex 4h    │
-│    telco-demo  · 8 tools  · 12 KB articles  · KB last reindex 12m   │
+│    care-demo  · 8 tools  · 12 KB articles  · KB last reindex 12m   │
 │    fleet-demo  · 5 tools  · 9 KB articles   · KB last reindex 3d ⚠  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -119,11 +119,11 @@ Each row links to its deep page. The KB-reindex warning is a chip, not a modal.
 Pack list (admin) shows all packs. Tenant operator sees only their own pack and is auto-redirected.
 
 ```
-/packs/telco-demo/overview
+/packs/care-demo/overview
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│  telco-demo · Telco Demo                              [Reload pack] │
-│  vertical: telco · loaded from packs/telco-demo · sha 8a3f...       │
+│  care-demo · Care Demo                              [Reload pack] │
+│  vertical: telco · loaded from packs/care-demo · sha 8a3f...       │
 │                                                                     │
 │  Theme preview            Model role bindings                       │
 │  ┌──────────────┐         reasoning  → openai/gpt-4o      [healthy] │
@@ -175,11 +175,11 @@ Click a tool → details page with full JSON Schema (args + result), source Open
 Knowledge-base browser per pack.
 
 ```
-/packs/telco-demo/kb
+/packs/care-demo/kb
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│  KB · telco-demo                          12 articles · 184 chunks  │
-│  Vector index: qdrant://shared/telco-demo · last reindex 12m ago    │
+│  KB · care-demo                          12 articles · 184 chunks  │
+│  Vector index: qdrant://shared/care-demo · last reindex 12m ago    │
 │  [Reindex now]  [Upload markdown/json]                              │
 │                                                                     │
 │  Search: [esim activation                                       🔍] │
@@ -204,11 +204,11 @@ AI-Trail. The audit-grade event stream — NOT the engineering trace (that's Lan
 │  AI-Trail                                                           │
 │  Pack: [any ▾]  Event: [any ▾]  Range: [last 24h ▾]  [⤓ Export CSV] │
 │                                                                     │
-│  2026-05-22 13:11:09  telco-demo  run-9af3  tool_call               │
+│  2026-05-22 13:11:09  care-demo  run-9af3  tool_call               │
 │       billing.adjust_charge  side-effect:write                      │
-│  2026-05-22 13:11:08  telco-demo  run-9af3  llm_response            │
+│  2026-05-22 13:11:08  care-demo  run-9af3  llm_response            │
 │       openai/gpt-4o · 142 in / 84 out tokens                        │
-│  2026-05-22 13:11:07  telco-demo  run-9af3  llm_request             │
+│  2026-05-22 13:11:07  care-demo  run-9af3  llm_request             │
 │  2026-05-22 13:08:42  bluemarble  run-7c12  handoff                 │
 │       tier2-network                                                 │
 │  …                                                                  │
@@ -217,7 +217,7 @@ AI-Trail. The audit-grade event stream — NOT the engineering trace (that's Lan
 /audit/run-9af3
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Correlation: run-9af3 · pack telco-demo · session sess-XYZ         │
+│  Correlation: run-9af3 · pack care-demo · session sess-XYZ         │
 │  Started 13:11:07 · ended 13:11:14 · duration 7s · 4 events         │
 │                                                                     │
 │  ├── llm_request          → openai/gpt-4o · system + user           │
@@ -265,10 +265,10 @@ The framework v0 model: one container per use case. The console lists them.
 │  Use-case services                                                  │
 │  ─────────────────────────────────────────────────────────────────  │
 │  Service              Version  Pack(s)             Health  Tools    │
-│  bill_explainer       0.3.0    telco-demo,         ●       3        │
+│  bill_explainer       0.3.0    care-demo,         ●       3        │
 │                                bluemarble                           │
 │  order_fallout        0.2.1    bluemarble          ●       6        │
-│  catalog_composer     0.1.0    telco-demo          ◐ slow  4        │
+│  catalog_composer     0.1.0    care-demo          ◐ slow  4        │
 │                                                                     │
 │  [Open in Langfuse ↗]                                               │
 └─────────────────────────────────────────────────────────────────────┘
@@ -279,8 +279,8 @@ The framework v0 model: one container per use case. The console lists them.
 Every admin write action is itself written to a separate `admin_log` stream.
 
 ```
-13:14  hitesh@comviva.com  POST /admin/packs/telco-demo/reload     OK
-13:11  hitesh@comviva.com  POST /admin/kb/telco-demo/reindex       OK
+13:14  admin@example.com   POST /admin/packs/care-demo/reload     OK
+13:11  admin@example.com   POST /admin/kb/care-demo/reindex       OK
 12:42  ops@partner.com     PATCH /admin/llm/roles/fast { … }       OK
 ```
 
@@ -320,7 +320,7 @@ All endpoints return JSON. Errors follow RFC 9457 (Problem Details).
 - The UI itself does **not** issue tokens. It redirects to the configured OIDC issuer (or accepts a static dev token).
 - After OIDC callback, the UI holds the access token in an httpOnly cookie. Every API call is sent with `Authorization: Bearer …`.
 - The runtime is the single point of authorisation; the UI's job is only to *hide* what the runtime would reject.
-- Scopes are intersected on every request: e.g., `agi:operator:bluemarble` cannot read `/packs/telco-demo`.
+- Scopes are intersected on every request: e.g., `agi:operator:bluemarble` cannot read `/packs/care-demo`.
 - Pack-scoped operators are auto-redirected to their pack on sign-in.
 
 ---
@@ -329,7 +329,7 @@ All endpoints return JSON. Errors follow RFC 9457 (Problem Details).
 
 | Surface | Theme source |
 |---|---|
-| Console chrome (sidebar, top bar, admin pages) | Operator-level theme (`operator.yaml` → `console.theme`). Defaults to a neutral OSS theme — no Comviva colours. |
+| Console chrome (sidebar, top bar, admin pages) | Operator-level theme (`operator.yaml` → `console.theme`). Defaults to a neutral OSS theme — no vendor-specific colours. |
 | Pack overview "Theme preview" card | Reads from the **active pack's** `pack.yaml`. Shown as a preview, not applied to the chrome. |
 | The agent's own surfaces (when previewed via a use-case service) | Active pack's theme tokens — same way care-intelligence applies BrandProvider. |
 

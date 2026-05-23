@@ -48,9 +48,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/comviva-oss/project-agi"
-Repository = "https://github.com/comviva-oss/project-agi"
-Documentation = "https://github.com/comviva-oss/project-agi/blob/main/README.md"
+Homepage = "https://github.com/margadeshaka/project-agi"
+Repository = "https://github.com/margadeshaka/project-agi"
+Documentation = "https://github.com/margadeshaka/project-agi/blob/main/README.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agi"]

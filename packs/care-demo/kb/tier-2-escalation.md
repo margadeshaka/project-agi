@@ -26,8 +26,8 @@ following is true:
 A clean handoff includes: a one-paragraph summary of what has been
 tried, the customer's verified identity status, the desired outcome in
 the customer's words, and any tickets or invoices already referenced.
-The destination queue is determined by the request type — `tier-2-mobile`
-for service-line issues, `tier-2-billing` for invoice disputes, and
+The destination queue is determined by the request type — `tier-2-care`
+for general support issues, `tier-2-billing` for invoice disputes, and
 `tier-2-trust` for fraud or account-takeover concerns.
 
 After the handoff, the AI assistant returns to a passive role on the

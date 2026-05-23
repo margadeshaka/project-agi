@@ -133,7 +133,7 @@ def _drive_direct_invoke(  # helper used by the parity test
 ) -> tuple[InvokeResponse, MemoryTrailSink]:
     """Run :func:`invoke_use_case` with the same wiring the route uses."""
     sink = MemoryTrailSink()
-    pack = SDKPack(slug="bluemarble", version="0.0.0-stub")
+    pack = SDKPack(slug="acme", version="0.0.0-stub")
     resp = _await(
         invoke_use_case(
             use_case_cls=chat_route._RuntimeChatUseCase,
@@ -143,7 +143,7 @@ def _drive_direct_invoke(  # helper used by the parity test
             available_tools={"_mcp": MCPClientsAPI(servers={}), "tools": []},
             trail_sink=sink,
             correlation_id=correlation_id,
-            tenant_id="bluemarble",
+            tenant_id="acme",
             session_id=None,
         )
     )
@@ -176,8 +176,8 @@ def test_chat_response_matches_dispatch_invoke_response(
         "/chat",
         json=payload,
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
             "X-Correlation-Id": "cid-http",
         },
     )
@@ -215,8 +215,8 @@ def test_chat_stream_yields_invoke_end_event(configured_client: TestClient) -> N
         "/chat/stream",
         json={"messages": [{"role": "user", "content": "ping"}]},
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
         },
     ) as resp:
         assert resp.status_code == 200
@@ -254,14 +254,14 @@ def test_chat_dispatches_through_seam(
     """
     sentinel = InvokeResponse(
         response="sentinel-reply",
-        pack="bluemarble",
+        pack="acme",
         use_case="chat",
         use_case_version="0.0.0",
         run_id="run-sentinel",
         status="completed",
         correlation_id="cid-sentinel",
         session_id=None,
-        tenant_id="bluemarble",
+        tenant_id="acme",
     )
     spy = AsyncMock(return_value=sentinel)
 
@@ -272,8 +272,8 @@ def test_chat_dispatches_through_seam(
         "/chat",
         json={"messages": [{"role": "user", "content": "hi"}], "max_steps": 7},
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
             "X-Session-Id": "sess-xyz",
         },
     )
@@ -290,7 +290,7 @@ def test_chat_dispatches_through_seam(
     assert spy.await_count == 1
     kwargs = spy.await_args.kwargs
     assert kwargs["use_case_cls"] is chat_route._RuntimeChatUseCase
-    assert kwargs["tenant_id"] == "bluemarble"
+    assert kwargs["tenant_id"] == "acme"
     assert kwargs["session_id"] == "sess-xyz"
     assert kwargs["correlation_id"]
     # The InvokeRequest had its max_steps preserved (caller provided 7).

@@ -39,10 +39,10 @@ const MOCKS: MockMap = {
     status: 200,
     body: [
       {
-        slug: 'telco-demo',
-        display_name: 'Telco Demo',
+        slug: 'care-demo',
+        display_name: 'Care Demo',
         vertical: 'telco',
-        source_path: 'packs/telco-demo',
+        source_path: 'packs/care-demo',
         sha: 'abc123def456',
         tool_count: 8,
         kb_article_count: 12,
@@ -50,13 +50,13 @@ const MOCKS: MockMap = {
       },
     ],
   },
-  '/admin/packs/telco-demo': {
+  '/admin/packs/care-demo': {
     status: 200,
     body: {
-      slug: 'telco-demo',
-      display_name: 'Telco Demo',
+      slug: 'care-demo',
+      display_name: 'Care Demo',
       vertical: 'telco',
-      source_path: 'packs/telco-demo',
+      source_path: 'packs/care-demo',
       sha: 'abc123def456',
       theme: { primary: 'rgb(0 102 204)' },
       role_bindings: [],
@@ -114,7 +114,7 @@ test.beforeEach(async ({ context }) => {
   });
 });
 
-const ROUTES = ['/', '/packs', '/packs/telco-demo/overview', '/tools', '/use-cases', '/audit', '/llm', '/admin/users', '/admin/log', '/admin/settings'];
+const ROUTES = ['/', '/packs', '/packs/care-demo/overview', '/tools', '/use-cases', '/audit', '/llm', '/admin/users', '/admin/log', '/admin/settings'];
 
 for (const path of ROUTES) {
   test(`route ${path} renders without 5xx`, async ({ page }) => {

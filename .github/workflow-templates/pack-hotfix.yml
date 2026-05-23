@@ -29,8 +29,8 @@ on:
         required: true
 
 env:
-  RUNTIME_IMAGE: "ghcr.io/comviva-oss/agi-runtime:1.0.0-rc1"
-  GHCR_ORG: "comviva-oss"
+  RUNTIME_IMAGE: "ghcr.io/margadeshaka/agi-runtime:1.0.0-rc1"
+  GHCR_ORG: "margadeshaka"
 
 jobs:
   smoke:
@@ -49,7 +49,7 @@ jobs:
       - name: Install project-agi SDK
         run: |
           pip install --quiet \
-            "agi-sdk @ git+https://github.com/comviva-oss/project-agi#subdirectory=packages/agi-sdk" \
+            "agi-sdk @ git+https://github.com/margadeshaka/project-agi#subdirectory=packages/agi-sdk" \
             "jinja2>=3.1" "pyyaml>=6.0"
 
       - id: detect

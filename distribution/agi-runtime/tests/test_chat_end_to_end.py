@@ -79,13 +79,13 @@ def test_chat_round_trips_with_fake_litellm(configured_client: TestClient) -> No
         "/chat",
         json={"messages": [{"role": "user", "content": "say hi"}]},
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
         },
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["pack"] == "bluemarble"
+    assert body["pack"] == "acme"
     assert body["status"] == "completed"
     assert body["response"] == "hello from fake litellm"
     assert body["correlation_id"]
@@ -98,8 +98,8 @@ def test_chat_legacy_message_field(configured_client: TestClient) -> None:
         "/chat",
         json={"message": "ping"},
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
         },
     )
     assert resp.status_code == 200
@@ -111,8 +111,8 @@ def test_chat_empty_messages_400(configured_client: TestClient) -> None:
         "/chat",
         json={"messages": []},
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
         },
     )
     assert resp.status_code == 400
@@ -125,11 +125,11 @@ def test_chat_stub_when_no_binding(client: TestClient) -> None:
         "/chat",
         json={"messages": [{"role": "user", "content": "hi"}]},
         headers={
-            "X-Pack": "bluemarble",
-            "Authorization": bearer_for("bluemarble"),
+            "X-Pack": "acme",
+            "Authorization": bearer_for("acme"),
         },
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["pack"] == "bluemarble"
+    assert body["pack"] == "acme"
     assert body.get("stub") is True

@@ -14,15 +14,15 @@ import {
 
 describe('audit filters', () => {
   it('parses pack and event from URLSearchParams', () => {
-    const sp = new URLSearchParams('pack=telco-demo&event=tool_call');
+    const sp = new URLSearchParams('pack=care-demo&event=tool_call');
     const f = parseAuditFilters(sp);
-    expect(f.pack).toBe('telco-demo');
+    expect(f.pack).toBe('care-demo');
     expect(f.eventType).toBe('tool_call');
   });
 
   it('parses pack from a plain object', () => {
-    const f = parseAuditFilters({ pack: 'bluemarble' });
-    expect(f.pack).toBe('bluemarble');
+    const f = parseAuditFilters({ pack: 'acme' });
+    expect(f.pack).toBe('acme');
     expect(f.eventType).toBeNull();
   });
 
@@ -43,7 +43,7 @@ describe('audit filters', () => {
 
   it('round-trips through serialiseAuditFilters → parseAuditFilters', () => {
     const original: AuditFilters = {
-      pack: 'telco-demo',
+      pack: 'care-demo',
       eventType: 'llm_response',
       from: '2026-05-22T00:00:00.000Z',
       to: '2026-05-22T23:59:59.000Z',
@@ -60,11 +60,11 @@ describe('audit filters', () => {
 
   it('filtersToQuery prefixes ? when filters are present', () => {
     const q = filtersToQuery({
-      pack: 'bluemarble',
+      pack: 'acme',
       eventType: null,
       from: null,
       to: null,
     });
-    expect(q).toBe('?pack=bluemarble');
+    expect(q).toBe('?pack=acme');
   });
 });

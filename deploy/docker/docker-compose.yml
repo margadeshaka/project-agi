@@ -31,7 +31,7 @@ services:
     build:
       context: ../..
       dockerfile: distribution/agi-runtime/Dockerfile
-    image: ghcr.io/comviva-oss/agi-runtime:dev
+    image: ghcr.io/margadeshaka/agi-runtime:dev
     container_name: agi-runtime
     environment:
       <<: *runtime-env
@@ -59,7 +59,7 @@ services:
     build:
       context: ../../distribution/agi-ui
       dockerfile: Dockerfile
-    image: ghcr.io/comviva-oss/agi-ui:dev
+    image: ghcr.io/margadeshaka/agi-ui:dev
     container_name: agi-ui
     environment:
       AGI_RUNTIME_URL: http://agi-runtime:9000

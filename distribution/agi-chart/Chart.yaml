@@ -11,9 +11,9 @@ type: application
 version: 1.0.0-rc1
 appVersion: "1.0.0-rc1"
 kubeVersion: ">=1.27.0-0"
-home: https://github.com/comviva-oss/project-agi
+home: https://github.com/margadeshaka/project-agi
 sources:
-  - https://github.com/comviva-oss/project-agi
+  - https://github.com/margadeshaka/project-agi
 maintainers:
   - name: project-agi contributors
 keywords:

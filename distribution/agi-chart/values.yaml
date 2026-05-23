@@ -51,7 +51,7 @@ runtime:
   enabled: true
   replicaCount: 2
   image:
-    repository: ghcr.io/comviva-oss/agi-runtime
+    repository: ghcr.io/margadeshaka/agi-runtime
     tag: ""             # defaults to .Chart.AppVersion when empty
     pullPolicy: IfNotPresent
   service:
@@ -119,7 +119,7 @@ ui:
   enabled: true
   replicaCount: 2
   image:
-    repository: ghcr.io/comviva-oss/agi-ui
+    repository: ghcr.io/margadeshaka/agi-ui
     tag: ""
     pullPolicy: IfNotPresent
   service:

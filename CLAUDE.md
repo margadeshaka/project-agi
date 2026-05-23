@@ -15,7 +15,7 @@ packages/                  # Band 1 — Product (the library)
 ├── agi-sdk/   agi/        # Python SDK: use_case, serve, models, mcp, prompts, trail, orchestrators
 ├── agi-core/  agi_core/   # Optional shared services: tool/registry hub, settings, http_routes
 ├── agi-mcpfyer/ agi_mcpfyer/  # OpenAPI 3 → MCP bundle generator (CLI: agi-mcpfyer)
-└── agi-packs/             # Reference packs (blank only — telco/fleet live in packs/)
+└── agi-packs/             # Reference packs (blank only — care/fleet live in packs/)
 
 distribution/              # Band 2 — Reference Distribution
 ├── agi-runtime/ agi_runtime/  # FastAPI :9000, X-Pack dispatch middleware, /chat /tools /kb /trail /mcp
@@ -24,7 +24,7 @@ distribution/              # Band 2 — Reference Distribution
 └── agi-chart/                 # Helm chart (Chart.yaml + values.schema.json)
 
 packs/                     # Tenant content (YAML/J2/JSON only — no code)
-├── telco-demo/   pack.yaml, tools.yaml, prompts/, kb/, scenarios/
+├── care-demo/   pack.yaml, tools.yaml, prompts/, kb/, scenarios/
 └── fleet-demo/
 
 deploy/docker/             # docker-compose.yml — runtime + ui + mongo + qdrant + langfuse + otel-collector
@@ -32,7 +32,7 @@ deploy/docker/             # docker-compose.yml — runtime + ui + mongo + qdran
 docs/decisions/            # ADRs — non-trivial changes need one
 ```
 
-**Band rule (enforced in CI):** Band 2 depends on Band 1; Band 1 NEVER imports Band 2. Gate: `packages/agi-sdk/tests/test_isolation_gate.py` AST-scans `agi/` and fails on any import of `agi_runtime`, `agi_ui`, `agi_auth`, `agi_chart`, `bm_ai`, `bluemarble`, `bm_mcp`, or native LLM SDKs (`openai`, `anthropic`, `boto3`).
+**Band rule (enforced in CI):** Band 2 depends on Band 1; Band 1 NEVER imports Band 2. Gate: `packages/agi-sdk/tests/test_isolation_gate.py` AST-scans `agi/` and fails on any import of the band-2 distribution packages (`agi_runtime`, `agi_ui`, `agi_auth`, `agi_chart`) or native LLM SDKs (`openai`, `anthropic`, `boto3`).
 
 ## Common commands
 

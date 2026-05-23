@@ -2,7 +2,7 @@
   "$comment": "SPDX-License-Identifier: Apache-2.0",
   "schema_version": 1,
   "slug": "telco-resolve",
-  "pack": "telco-demo",
+  "pack": "care-demo",
   "title": "Duplicate charge — autonomous credit",
   "description": "Customer reports a duplicate charge under the credit cap. Assistant must verify policy, issue a credit, and disclose the action.",
   "category": "resolve",

@@ -85,7 +85,7 @@ class _FakePack:
 
     def __init__(
         self,
-        slug: str = "telco-demo",
+        slug: str = "care-demo",
         allow: list[str] | None = None,
         deny: list[str] | None = None,
     ) -> None:
@@ -125,7 +125,7 @@ class _FakeMCP:
 def _make_run(*, max_steps: int = 5, user: str = "hello") -> Run:
     return Run(
         correlation_id="cid-test",
-        pack_slug="telco-demo",
+        pack_slug="care-demo",
         use_case_slug="bill_explainer",
         use_case_version="0.1.0",
         tenant_id="t-1",
@@ -156,7 +156,7 @@ def _reset_fakes() -> None:
 def test_set_run_baggage_shape() -> None:
     run = _make_run()
     bag = set_run_baggage(run)
-    assert bag["bm.pack"] == "telco-demo"
+    assert bag["bm.pack"] == "care-demo"
     assert bag["bm.use_case"] == "bill_explainer"
     assert bag["bm.run_id"] == run.run_id
     assert bag["bm.tenant_id"] == "t-1"

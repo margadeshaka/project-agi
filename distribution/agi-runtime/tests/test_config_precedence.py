@@ -27,7 +27,7 @@ def test_defaults_apply_when_nothing_set(tmp_path: Path) -> None:
 def test_operator_yaml_is_applied(tmp_path: Path) -> None:
     op = tmp_path / "operator.yaml"
     op.write_text(
-        "operator_id: bluemarble-prod\n"
+        "operator_id: acme-prod\n"
         "packs_dir: /var/agi/packs\n"
         "max_steps: 12\n"
         "models:\n"
@@ -40,7 +40,7 @@ def test_operator_yaml_is_applied(tmp_path: Path) -> None:
         env={},
         headers={},
     )
-    assert cfg.operator_id == "bluemarble-prod"
+    assert cfg.operator_id == "acme-prod"
     assert str(cfg.packs_dir) == "/var/agi/packs"
     assert cfg.max_steps == 12
     binding = cfg.model_binding("reasoning")

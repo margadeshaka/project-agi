@@ -79,7 +79,7 @@ def test_missing_xpack_400(client: TestClient) -> None:
     resp = client.post(
         "/chat",
         json={"message": "hi"},
-        headers={"Authorization": "Bearer tenant:bluemarble"},
+        headers={"Authorization": "Bearer tenant:acme"},
     )
     assert resp.status_code == 400
     assert resp.json()["error"] == "missing_x_pack"
@@ -89,7 +89,7 @@ def test_missing_token_401(client: TestClient) -> None:
     resp = client.post(
         "/chat",
         json={"message": "hi"},
-        headers={"X-Pack": "bluemarble"},
+        headers={"X-Pack": "acme"},
     )
     assert resp.status_code == 401
 

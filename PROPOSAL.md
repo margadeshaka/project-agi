@@ -6,7 +6,7 @@
 **Owner:** hitesh.gupta@comviva.com
 **Created:** 2026-05-22
 **Status:** Draft for review
-**Outcome:** A single Apache-2.0 repo that supersedes `bluemarble-ai-framework` (empty) and replaces the externally-non-runnable parts of `bm-ai-platform` with a self-hosted, configuration-driven, multi-tenant agent stack.
+**Outcome:** A single Apache-2.0 repo that supersedes earlier internal framework prototypes and replaces the externally-non-runnable parts of the prior platform with a self-hosted, configuration-driven, multi-tenant agent stack.
 
 ---
 
@@ -28,7 +28,7 @@ These will **not** be ported from `bm-ai-platform`. They are either proprietary,
 | `bm-ai-auth`, `bm-ai-logging`, `bm-ai-mongodb` (internal Nexus libs) | Proprietary; replace with PyPI equivalents (`authlib`, stdlib `logging` + `structlog`, `motor`/`pymongo`). |
 | Bedrock-specific account ARNs, role names, region defaults | Customer config, not framework concern. Lift into env-driven config. |
 | Keycloak realm `bm-demo5` and any hard-coded client IDs | Demo wiring; replace with a generic OIDC adapter that accepts any issuer. |
-| BlueMarble / BT / KPN / Verizon-Connect brand seed data | Customer demo content; ships as separate optional packs, not in core. |
+| Customer-specific brand seed data | Customer demo content; ships as separate optional packs, not in core. |
 | MySQL read-only CRM connection (`10.31.6.149`) | Comviva infra; out of scope. The framework offers a generic SQL data-source adapter instead. |
 | `bm-quote-management-v4` and any CPQ wiring | Different solution; out of scope. |
 | Helm `charts/bm-ai-platform/` (Comviva-internal values) | Replace with a clean public Helm chart parameterised by tenant pack. |
@@ -88,7 +88,7 @@ project-agi/
 │       └── (Next 14+, app router, shadcn/ui)
 ├── packs/
 │   ├── blank/                       # minimal starter pack
-│   ├── telco-demo/                  # opinionated reference pack
+│   ├── care-demo/                  # opinionated reference pack
 │   └── fleet-demo/
 ├── deploy/
 │   ├── docker/
@@ -119,7 +119,7 @@ project-agi/
 A **pack** is a folder of YAML/JSON that fully describes a tenant. No code.
 
 ```
-packs/telco-demo/
+packs/care-demo/
 ├── pack.yaml                # brand identity, theme, allowed tools, default LLM
 ├── tools.yaml               # tool declarations (name, schema, handler ref)
 ├── kb/                      # knowledge-base seed (markdown / JSON)
@@ -134,8 +134,8 @@ packs/telco-demo/
 `pack.yaml` example:
 
 ```yaml
-slug: telco-demo
-display_name: Telco Demo
+slug: care-demo
+display_name: Care Demo
 vertical: telco
 theme:
   primary: "#0066CC"
@@ -153,7 +153,7 @@ auth:
   required_scopes: ["agent:chat"]
 ```
 
-Loading is a single call: `runtime = AgentRuntime(pack=load_pack("packs/telco-demo"))`. Switching tenants at request time is a header (`X-Pack: telco-demo`), modelled on care-intelligence's `X-Brand`.
+Loading is a single call: `runtime = AgentRuntime(pack=load_pack("packs/care-demo"))`. Switching tenants at request time is a header (`X-Pack: care-demo`), modelled on care-intelligence's `X-Brand`.
 
 ## 6. Phased plan
 
@@ -191,7 +191,7 @@ Loading is a single call: `runtime = AgentRuntime(pack=load_pack("packs/telco-de
 - Tag `v0.3.0`.
 
 ### Phase 4 — Reference packs + Helm (weeks 10–12)
-- `packs/telco-demo/` — KB + tools + scenarios, vendor-neutral.
+- `packs/care-demo/` — KB + tools + scenarios, vendor-neutral.
 - `packs/fleet-demo/` — second vertical, proves cross-vertical switching.
 - Public Helm chart in `deploy/helm/agi/`.
 - Documentation pass: getting-started, packs, tools, llm-providers, auth, deploy.

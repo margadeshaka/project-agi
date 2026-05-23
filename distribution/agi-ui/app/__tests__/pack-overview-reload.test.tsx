@@ -38,7 +38,7 @@ import type { AdminLogEntry } from '@/lib/api/types';
 describe('reload-button URL contract', () => {
   describe('reloadPostPath', () => {
     it('returns /admin/packs/<slug>/reload for a normal slug', () => {
-      expect(reloadPostPath('telco-demo')).toBe('/admin/packs/telco-demo/reload');
+      expect(reloadPostPath('care-demo')).toBe('/admin/packs/care-demo/reload');
     });
 
     it('URL-encodes special characters in the slug', () => {
@@ -48,8 +48,8 @@ describe('reload-button URL contract', () => {
 
   describe('reloadLogPath', () => {
     it('hits /admin/log with subject=pack.reload + pack + limit=1', () => {
-      expect(reloadLogPath('telco-demo')).toBe(
-        '/admin/log?subject=pack.reload&pack=telco-demo&limit=1',
+      expect(reloadLogPath('care-demo')).toBe(
+        '/admin/log?subject=pack.reload&pack=care-demo&limit=1',
       );
     });
 
@@ -87,7 +87,7 @@ describe('correlationOf', () => {
       timestamp_iso: '2026-05-23T10:00:00Z',
       actor: 'admin',
       method: 'POST',
-      path: '/admin/packs/telco-demo/reload',
+      path: '/admin/packs/care-demo/reload',
       status: 200,
       ok: true,
       correlation_id: 'abc-123-xyz',

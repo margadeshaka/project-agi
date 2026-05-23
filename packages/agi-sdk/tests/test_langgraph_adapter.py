@@ -24,7 +24,7 @@ from agi.orchestrators.langgraph import (  # noqa: E402
 
 
 def _pack(allow: list[str] | None = None) -> Pack:
-    return Pack(slug="telco-demo", version="0.1.0", tool_allowlist=allow or [])
+    return Pack(slug="care-demo", version="0.1.0", tool_allowlist=allow or [])
 
 
 def test_set_pack_baggage_attaches_bm_keys() -> None:
@@ -40,7 +40,7 @@ def test_set_pack_baggage_attaches_bm_keys() -> None:
     pack = _pack()
     ctx = set_pack_baggage(None, pack)
     assert ctx is not None, "expected an OTel Context, got None"
-    assert baggage.get_baggage("bm.pack", ctx) == "telco-demo"
+    assert baggage.get_baggage("bm.pack", ctx) == "care-demo"
     assert baggage.get_baggage("bm.pack.version", ctx) == "0.1.0"
 
 

@@ -60,7 +60,7 @@ Optional `metadata` keys consumed by the runtime + UI:
 - `contact.support_hours` / `contact.handoff_queue` — defaults injected
   into prompt context.
 
-See `packs/telco-demo/pack.yaml` for a fully populated example.
+See `packs/care-demo/pack.yaml` for a fully populated example.
 
 ## `tools.yaml`
 

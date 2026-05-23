@@ -40,7 +40,7 @@ The lane is gated on branch name:
 pack-hotfix/<slug>/<ticket-id>
 ```
 
-Example: `pack-hotfix/telco-demo/AGI-1473`.
+Example: `pack-hotfix/care-demo/AGI-1473`.
 
 The CI workflow extracts the `<slug>` and `<ticket-id>` from the branch
 name and uses them to name the resulting image tag:

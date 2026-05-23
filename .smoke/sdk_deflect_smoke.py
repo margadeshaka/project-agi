@@ -66,7 +66,7 @@ KB_PATH = (
     / "data"
     / "seed"
     / "kb"
-    / "bluemarble.json"
+    / "acme.json"
 )
 
 
@@ -226,7 +226,7 @@ async def main() -> int:
         extra={},
     )
     pack = Pack(
-        slug="bluemarble",
+        slug="acme",
         version="0.1.0",
         name="BlueMarble (port)",
         tool_allowlist=["search_knowledge_base"],
@@ -244,7 +244,7 @@ async def main() -> int:
         use_case_slug="deflect_esim_install",
         use_case_version="0.1.0",
         correlation_id="deflect-esim-1",
-        tenant_id="bluemarble",
+        tenant_id="acme",
         session_id="sess-deflect",
         user_message=SCENARIO["customer_opening"],
         system_prompt=SYSTEM_PROMPT,

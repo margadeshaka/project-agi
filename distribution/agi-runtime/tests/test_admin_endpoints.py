@@ -94,9 +94,9 @@ def configured(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
         state.trail_sink = MemoryTrailSink()
         _seed_pack(
             state,
-            "telco-demo",
+            "care-demo",
             version="2.0.0",
-            name="Telco Demo",
+            name="Care Demo",
             declared_roles=["reasoning", "fast", "extractor"],
             tool_allowlist=["billing.adjust_charge", "billing.list_invoices"],
             metadata={
@@ -135,14 +135,14 @@ def configured(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
 
 def test_packs_list_returns_loaded_packs(configured: TestClient) -> None:
     # admin sees both
-    resp = configured.get("/admin/packs", headers=_hdr("telco-demo", "agi:admin"))
+    resp = configured.get("/admin/packs", headers=_hdr("care-demo", "agi:admin"))
     assert resp.status_code == 200, resp.text
     body = resp.json()
     slugs = {p["slug"] for p in body["packs"]}
-    assert slugs == {"telco-demo", "fleet-demo"}
+    assert slugs == {"care-demo", "fleet-demo"}
     assert body["count"] == 2
     # Shape contract
-    sample = next(p for p in body["packs"] if p["slug"] == "telco-demo")
+    sample = next(p for p in body["packs"] if p["slug"] == "care-demo")
     for key in (
         "slug",
         "name",
@@ -161,13 +161,13 @@ def test_packs_list_operator_403(configured: TestClient) -> None:
     """Operators don't enumerate peer packs — /admin/whoami carries their slug."""
     resp = configured.get(
         "/admin/packs",
-        headers=_hdr("telco-demo", "agi:operator:telco-demo"),
+        headers=_hdr("care-demo", "agi:operator:care-demo"),
     )
     assert resp.status_code == 403
 
 
 def test_packs_list_no_scope_403(configured: TestClient) -> None:
-    resp = configured.get("/admin/packs", headers=_hdr("telco-demo"))
+    resp = configured.get("/admin/packs", headers=_hdr("care-demo"))
     assert resp.status_code == 403
 
 
@@ -175,7 +175,7 @@ def test_packs_list_viewer_403(configured: TestClient) -> None:
     """Viewers don't enumerate the pack catalogue at the platform level."""
     resp = configured.get(
         "/admin/packs",
-        headers=_hdr("telco-demo", "agi:viewer"),
+        headers=_hdr("care-demo", "agi:viewer"),
     )
     assert resp.status_code == 403
 
@@ -188,7 +188,7 @@ def test_packs_list_viewer_403(configured: TestClient) -> None:
 def test_packs_detail_404_unknown_slug(configured: TestClient) -> None:
     resp = configured.get(
         "/admin/packs/ghost",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 404
 
@@ -197,8 +197,8 @@ def test_packs_detail_returns_role_bindings_and_allowed_tools(
     configured: TestClient,
 ) -> None:
     resp = configured.get(
-        "/admin/packs/telco-demo",
-        headers=_hdr("telco-demo", "agi:admin"),
+        "/admin/packs/care-demo",
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -217,7 +217,7 @@ def test_packs_detail_returns_role_bindings_and_allowed_tools(
         "activity_24h",
     ):
         assert key in body, f"missing key {key}"
-    assert body["slug"] == "telco-demo"
+    assert body["slug"] == "care-demo"
     assert "billing.adjust_charge" in body["allowed_tools"]
     assert body["role_bindings"]["system_prompt"] == "You are a telco assistant."
     assert "reasoning" in body["models"]
@@ -226,11 +226,11 @@ def test_packs_detail_returns_role_bindings_and_allowed_tools(
 
 
 def test_packs_detail_operator_blocked_on_other_pack(configured: TestClient) -> None:
-    # operator for fleet-demo can't read telco-demo's detail. Their X-Pack
+    # operator for fleet-demo can't read care-demo's detail. Their X-Pack
     # has to match their own claim, so we hit the endpoint via fleet-demo
-    # and request the telco-demo slug in-path.
+    # and request the care-demo slug in-path.
     resp = configured.get(
-        "/admin/packs/telco-demo",
+        "/admin/packs/care-demo",
         headers=_hdr("fleet-demo", "agi:operator:fleet-demo"),
     )
     assert resp.status_code == 403
@@ -246,7 +246,7 @@ def test_packs_detail_counts_recent_activity(configured: TestClient) -> None:
         await sink.write(
             new_event(
                 correlation_id="c1",
-                pack_slug="telco-demo",
+                pack_slug="care-demo",
                 session_id="s",
                 event_type="llm.call",
                 payload={},
@@ -255,7 +255,7 @@ def test_packs_detail_counts_recent_activity(configured: TestClient) -> None:
         await sink.write(
             new_event(
                 correlation_id="c2",
-                pack_slug="telco-demo",
+                pack_slug="care-demo",
                 session_id="s",
                 event_type="mcp.tool",
                 payload={},
@@ -264,7 +264,7 @@ def test_packs_detail_counts_recent_activity(configured: TestClient) -> None:
         await sink.write(
             new_event(
                 correlation_id="c3",
-                pack_slug="telco-demo",
+                pack_slug="care-demo",
                 session_id="s",
                 event_type="error",
                 payload={},
@@ -273,8 +273,8 @@ def test_packs_detail_counts_recent_activity(configured: TestClient) -> None:
 
     asyncio.run(seed())
     resp = configured.get(
-        "/admin/packs/telco-demo",
-        headers=_hdr("telco-demo", "agi:admin"),
+        "/admin/packs/care-demo",
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200
     assert resp.json()["activity_24h"] == {"chats": 1, "tool_calls": 1, "errors": 1}
@@ -289,19 +289,19 @@ def test_users_admin_only(configured: TestClient) -> None:
     # viewer → 403
     resp = configured.get(
         "/admin/users",
-        headers=_hdr("telco-demo", "agi:viewer"),
+        headers=_hdr("care-demo", "agi:viewer"),
     )
     assert resp.status_code == 403
     # operator → 403
     resp = configured.get(
         "/admin/users",
-        headers=_hdr("telco-demo", "agi:operator:telco-demo"),
+        headers=_hdr("care-demo", "agi:operator:care-demo"),
     )
     assert resp.status_code == 403
     # admin → 200
     resp = configured.get(
         "/admin/users",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200
 
@@ -309,16 +309,16 @@ def test_users_admin_only(configured: TestClient) -> None:
 def test_users_returns_synthetic_user_dev_noop(configured: TestClient) -> None:
     resp = configured.get(
         "/admin/users",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["count"] == 1
     assert body["source"] == "synthetic-from-bearer"
     user = body["users"][0]
-    assert user["subject"] == "user-telco-demo"
+    assert user["subject"] == "user-care-demo"
     assert "agi:admin" in user["scopes"]
-    assert user["tenant_id"] == "telco-demo"
+    assert user["tenant_id"] == "care-demo"
 
 
 # ---------------------------------------------------------------------------
@@ -329,12 +329,12 @@ def test_users_returns_synthetic_user_dev_noop(configured: TestClient) -> None:
 def test_settings_admin_only(configured: TestClient) -> None:
     resp = configured.get(
         "/admin/settings",
-        headers=_hdr("telco-demo", "agi:viewer"),
+        headers=_hdr("care-demo", "agi:viewer"),
     )
     assert resp.status_code == 403
     resp = configured.get(
         "/admin/settings",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200
 
@@ -342,7 +342,7 @@ def test_settings_admin_only(configured: TestClient) -> None:
 def test_settings_includes_version_and_env(configured: TestClient) -> None:
     resp = configured.get(
         "/admin/settings",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200, resp.text
     settings = resp.json()["settings"]
@@ -372,7 +372,7 @@ def test_settings_includes_version_and_env(configured: TestClient) -> None:
 
 def _seed_use_cases(state: RuntimeState) -> None:
     """Mutate the pre-seeded telco/fleet packs so they declare ``use_cases``."""
-    telco = state.pack_loader.get("telco-demo")
+    telco = state.pack_loader.get("care-demo")
     fleet = state.pack_loader.get("fleet-demo")
     assert telco is not None and fleet is not None
     # bill_explainer lives on both packs (same name+version) — must aggregate.
@@ -408,7 +408,7 @@ def test_use_cases_returns_flat_service_list(configured: TestClient) -> None:
     _seed_use_cases(configured.app.state.runtime)
     resp = configured.get(
         "/admin/use-cases",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -427,18 +427,18 @@ def test_use_cases_aggregates_across_packs(configured: TestClient) -> None:
     _seed_use_cases(configured.app.state.runtime)
     resp = configured.get(
         "/admin/use-cases",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     body = resp.json()
     rows_by_name = {(r["name"], r["version"]): r for r in body["use_cases"]}
     bill = rows_by_name[("bill_explainer", "0.3.0")]
     pack_slugs = {p["slug"] for p in bill["packs"]}
-    assert pack_slugs == {"telco-demo", "fleet-demo"}
+    assert pack_slugs == {"care-demo", "fleet-demo"}
     # tool_count is the max declared across packs — telco lists 3 tools.
     assert bill["tool_count"] == 3
     # Use-cases on a single pack stay single-row.
     deflect = rows_by_name[("deflect", "1.0.0")]
-    assert [p["slug"] for p in deflect["packs"]] == ["telco-demo"]
+    assert [p["slug"] for p in deflect["packs"]] == ["care-demo"]
     assert deflect["tool_count"] == 1
 
 
@@ -450,7 +450,7 @@ def test_use_cases_includes_langfuse_url_when_configured(
     monkeypatch.setenv("LANGFUSE_HOST", "https://langfuse.example.com")
     resp = configured.get(
         "/admin/use-cases",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.json()["langfuse_url"] == "https://langfuse.example.com"
 
@@ -458,7 +458,7 @@ def test_use_cases_includes_langfuse_url_when_configured(
     monkeypatch.delenv("AGI_LANGFUSE_URL", raising=False)
     resp = configured.get(
         "/admin/use-cases",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.json()["langfuse_url"] is None
 
@@ -487,7 +487,7 @@ def test_use_cases_admin_sees_all(configured: TestClient) -> None:
     for scope in ("agi:admin", "agi:viewer"):
         resp = configured.get(
             "/admin/use-cases",
-            headers=_hdr("telco-demo", scope),
+            headers=_hdr("care-demo", scope),
         )
         assert resp.status_code == 200, resp.text
         rows = resp.json()["use_cases"]
@@ -496,7 +496,7 @@ def test_use_cases_admin_sees_all(configured: TestClient) -> None:
     # Bare caller without any qualifying scope → 403.
     resp = configured.get(
         "/admin/use-cases",
-        headers=_hdr("telco-demo"),
+        headers=_hdr("care-demo"),
     )
     assert resp.status_code == 403
 
@@ -509,7 +509,7 @@ def test_use_cases_admin_sees_all(configured: TestClient) -> None:
 def test_llm_providers_returns_ready_in_test_env(configured: TestClient) -> None:
     resp = configured.get(
         "/admin/llm/providers",
-        headers=_hdr("telco-demo", "agi:admin"),
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -525,13 +525,13 @@ def test_llm_providers_returns_ready_in_test_env(configured: TestClient) -> None
     # viewer also allowed
     resp = configured.get(
         "/admin/llm/providers",
-        headers=_hdr("telco-demo", "agi:viewer"),
+        headers=_hdr("care-demo", "agi:viewer"),
     )
     assert resp.status_code == 200
     # bare caller → 403
     resp = configured.get(
         "/admin/llm/providers",
-        headers=_hdr("telco-demo"),
+        headers=_hdr("care-demo"),
     )
     assert resp.status_code == 403
 
@@ -569,12 +569,12 @@ def _parse_sse_events(body: str) -> list[tuple[str, dict]]:
 def test_reindex_json_default_response(configured: TestClient) -> None:
     """Regression: no ``Accept: text/event-stream`` → legacy synchronous JSON."""
     resp = configured.post(
-        "/admin/kb/telco-demo/reindex",
-        headers=_hdr("telco-demo", "agi:admin"),
+        "/admin/kb/care-demo/reindex",
+        headers=_hdr("care-demo", "agi:admin"),
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["pack"] == "telco-demo"
+    assert body["pack"] == "care-demo"
     assert body["reindex_queued"] is True
     assert body["correlation_id"]
     # Shape stays byte-for-byte stable — no SSE-only fields leaking into JSON.
@@ -584,9 +584,9 @@ def test_reindex_json_default_response(configured: TestClient) -> None:
 def test_reindex_json_with_application_json_accept(configured: TestClient) -> None:
     """``Accept: application/json`` still routes to the sync JSON envelope."""
     resp = configured.post(
-        "/admin/kb/telco-demo/reindex",
+        "/admin/kb/care-demo/reindex",
         headers={
-            **_hdr("telco-demo", "agi:admin"),
+            **_hdr("care-demo", "agi:admin"),
             "Accept": "application/json",
         },
     )
@@ -597,12 +597,12 @@ def test_reindex_json_with_application_json_accept(configured: TestClient) -> No
 def test_reindex_sse_emits_start_progress_complete(configured: TestClient) -> None:
     """SSE path emits a ``start``, one+ ``progress``, and one ``complete``."""
     headers = {
-        **_hdr("telco-demo", "agi:admin"),
+        **_hdr("care-demo", "agi:admin"),
         "Accept": "text/event-stream",
     }
     with configured.stream(
         "POST",
-        "/admin/kb/telco-demo/reindex",
+        "/admin/kb/care-demo/reindex",
         headers=headers,
     ) as resp:
         assert resp.status_code == 200, resp.read().decode()
@@ -616,21 +616,21 @@ def test_reindex_sse_emits_start_progress_complete(configured: TestClient) -> No
     assert names[-1] == "complete", names
 
     start = next(payload for name, payload in events if name == "start")
-    assert start["slug"] == "telco-demo"
+    assert start["slug"] == "care-demo"
     assert start["started_iso"]
 
     progress = [payload for name, payload in events if name == "progress"]
     assert progress[0]["percent"] == 0
     assert progress[-1]["percent"] == 100
     for tick in progress:
-        assert tick["slug"] == "telco-demo"
+        assert tick["slug"] == "care-demo"
         assert "articles_done" in tick
         assert "articles_total" in tick
         # FE kb-browser.tsx reads ``progress`` directly off the data line.
         assert isinstance(tick["progress"], int)
 
     complete = next(payload for name, payload in events if name == "complete")
-    assert complete["slug"] == "telco-demo"
+    assert complete["slug"] == "care-demo"
     assert complete["completed_iso"]
     assert "articles_indexed" in complete
     assert complete["correlation_id"]
@@ -642,13 +642,13 @@ def test_reindex_sse_non_admin_403(configured: TestClient) -> None:
     """Viewer / operator / bare-caller all 403 — consistent with the JSON path."""
     for scope_args in (
         ("agi:viewer",),
-        ("agi:operator:telco-demo",),
+        ("agi:operator:care-demo",),
         (),
     ):
         resp = configured.post(
-            "/admin/kb/telco-demo/reindex",
+            "/admin/kb/care-demo/reindex",
             headers={
-                **_hdr("telco-demo", *scope_args),
+                **_hdr("care-demo", *scope_args),
                 "Accept": "text/event-stream",
             },
         )
@@ -668,7 +668,7 @@ def test_reindex_sse_unknown_pack_emits_error_event_or_500(configured: TestClien
     resp = configured.post(
         "/admin/kb/ghost-pack/reindex",
         headers={
-            **_hdr("telco-demo", "agi:admin"),  # X-Pack must match the bearer tenant
+            **_hdr("care-demo", "agi:admin"),  # X-Pack must match the bearer tenant
             "Accept": "text/event-stream",
         },
     )
@@ -684,15 +684,15 @@ def test_reindex_writes_admin_log_event(configured: TestClient) -> None:
 
     # JSON path
     configured.post(
-        "/admin/kb/telco-demo/reindex",
-        headers=_hdr("telco-demo", "agi:admin"),
+        "/admin/kb/care-demo/reindex",
+        headers=_hdr("care-demo", "agi:admin"),
     )
     # SSE path (drain stream so the generator completes)
     with configured.stream(
         "POST",
-        "/admin/kb/telco-demo/reindex",
+        "/admin/kb/care-demo/reindex",
         headers={
-            **_hdr("telco-demo", "agi:admin"),
+            **_hdr("care-demo", "agi:admin"),
             "Accept": "text/event-stream",
         },
     ) as resp:

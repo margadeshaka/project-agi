@@ -183,7 +183,7 @@ describe('BFF /api/runtime/* — unauthenticated rejection', () => {
 describe('BFF /api/runtime/* — pack scope enforcement', () => {
   it('admin can use any pack via the agi.pack cookie', async () => {
     mockSession.value = makeAdminSession({ accessToken: 'admin-tok' });
-    mockCookieStore.value.set('agi.pack', 'telco-demo');
+    mockCookieStore.value.set('agi.pack', 'care-demo');
     const { captured } = captureFetch(() => new Response('{}', { status: 200 }));
     const { GET } = await loadRoute();
 
@@ -191,12 +191,12 @@ describe('BFF /api/runtime/* — pack scope enforcement', () => {
     const res = await GET(req, { params: { path: segments } });
 
     expect(res.status).toBe(200);
-    expect(captured[0].headers['x-pack']).toBe('telco-demo');
+    expect(captured[0].headers['x-pack']).toBe('care-demo');
   });
 
   it('rejects pack cookie that does not match the operator scope', async () => {
-    mockSession.value = makeOperatorSession('bluemarble', { accessToken: 'op-tok' });
-    mockCookieStore.value.set('agi.pack', 'telco-demo');
+    mockSession.value = makeOperatorSession('acme', { accessToken: 'op-tok' });
+    mockCookieStore.value.set('agi.pack', 'care-demo');
     const fetchSpy = vi.fn();
     globalThis.fetch = fetchSpy as unknown as typeof fetch;
     const { GET } = await loadRoute();
@@ -209,7 +209,7 @@ describe('BFF /api/runtime/* — pack scope enforcement', () => {
     const body = await res.json();
     expect(body.title).toBe('Pack not in scope');
     expect(body.status).toBe(403);
-    expect(body.detail).toContain('telco-demo');
+    expect(body.detail).toContain('care-demo');
   });
 
   it('viewer can read any pack', async () => {
@@ -229,8 +229,8 @@ describe('BFF /api/runtime/* — pack scope enforcement', () => {
   });
 
   it('operator with matching slug is allowed', async () => {
-    mockSession.value = makeOperatorSession('telco-demo', { accessToken: 'op-tok' });
-    mockCookieStore.value.set('agi.pack', 'telco-demo');
+    mockSession.value = makeOperatorSession('care-demo', { accessToken: 'op-tok' });
+    mockCookieStore.value.set('agi.pack', 'care-demo');
     const { captured } = captureFetch(() => new Response('{}', { status: 200 }));
     const { GET } = await loadRoute();
 
@@ -238,7 +238,7 @@ describe('BFF /api/runtime/* — pack scope enforcement', () => {
     const res = await GET(req, { params: { path: segments } });
 
     expect(res.status).toBe(200);
-    expect(captured[0].headers['x-pack']).toBe('telco-demo');
+    expect(captured[0].headers['x-pack']).toBe('care-demo');
   });
 });
 

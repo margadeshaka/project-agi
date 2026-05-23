@@ -48,8 +48,8 @@ dev = [
 agi-runtime = "agi_runtime.main:run"
 
 [project.urls]
-Homepage = "https://github.com/comviva-oss/project-agi"
-Repository = "https://github.com/comviva-oss/project-agi"
+Homepage = "https://github.com/margadeshaka/project-agi"
+Repository = "https://github.com/margadeshaka/project-agi"
 
 [tool.uv.sources]
 agi-sdk = { workspace = true }

@@ -2,7 +2,7 @@
   "$comment": "SPDX-License-Identifier: Apache-2.0",
   "schema_version": 1,
   "slug": "telco-deflect",
-  "pack": "telco-demo",
+  "pack": "care-demo",
   "title": "eSIM activation — deflect to KB",
   "description": "Customer asks how to activate an eSIM. Answer must come from the KB with no autonomous tool action beyond kb.search.",
   "category": "deflect",

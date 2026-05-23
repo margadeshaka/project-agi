@@ -5,7 +5,7 @@ Three layers, one repo, two distributions. Borrowed shape from `care-intelligenc
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                          packs/  (tenants)                       │
-│  blank · telco-demo · fleet-demo · <your-pack>                   │
+│  blank · care-demo · fleet-demo · <your-pack>                   │
 │  YAML/JSON only — no code                                        │
 └────────────────────────────────┬────────────────────────────────┘
                                  │ loaded at runtime
@@ -46,7 +46,7 @@ Pure Python. No HTTP, no React. You can import it from a Lambda, a CLI, a Jupyte
 ```python
 from agi_core import AgentRuntime, load_pack
 
-pack    = load_pack("packs/telco-demo")
+pack    = load_pack("packs/care-demo")
 runtime = AgentRuntime(pack=pack)
 
 reply = runtime.chat(
@@ -159,7 +159,7 @@ One append-only stream, scoped by `correlation_id`. Every event carries:
 {
   "ts":             "2026-05-22T13:14:15.123Z",
   "correlation_id": "run-abc",
-  "pack_slug":      "telco-demo",
+  "pack_slug":      "care-demo",
   "session_id":     "sess-xyz",
   "event_type":     "llm_request | llm_response | tool_call | tool_result | error | handoff",
   "payload":        { ... }

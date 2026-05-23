@@ -47,7 +47,7 @@ The agi-runtime container surface.
 | `runtime.enabled` | bool | `true` | Toggle the runtime entirely. |
 | `runtime.replicaCount` | int | `2` | Ignored when `autoscaling.enabled=true`. |
 | `runtime.hardeningMode` | bool | `false` | Sets `AGI_HARDEN=1` independently of `global.hardening.mode`. |
-| `runtime.image.repository` | string | `ghcr.io/comviva-oss/agi-runtime` | |
+| `runtime.image.repository` | string | `ghcr.io/margadeshaka/agi-runtime` | |
 | `runtime.image.tag` | string | `""` -> Chart.AppVersion | Pin in production. |
 | `runtime.image.pullPolicy` | enum | `IfNotPresent` | |
 | `runtime.service.type` | enum | `ClusterIP` | |
@@ -77,7 +77,7 @@ The agi-ui admin console.
 |---|---|---|---|
 | `ui.enabled` | bool | `true` | |
 | `ui.replicaCount` | int | `2` | |
-| `ui.image.{repository,tag,pullPolicy}` | object | ghcr.io/comviva-oss/agi-ui | |
+| `ui.image.{repository,tag,pullPolicy}` | object | ghcr.io/margadeshaka/agi-ui | |
 | `ui.resources` | object | smaller than runtime | |
 | `ui.podSecurityContext` / `ui.securityContext` | object | same posture as runtime | |
 

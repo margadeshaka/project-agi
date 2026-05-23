@@ -55,7 +55,7 @@ publishable to PyPI and the distribution is publishable to GHCR.
 - **Pack hotfix lane**: reference `.github/workflow-templates/pack-hotfix.yml`
   with the documented `pack-hotfix/<ticket-id>` branch convention and the
   ≤15-minute merge-to-live target.
-- **Reference packs**: `blank`, `telco-demo`, `fleet-demo` under `packs/`,
+- **Reference packs**: `blank`, `care-demo`, `fleet-demo` under `packs/`,
   validated by `validate-packs.yml`.
 
 ### Changed
@@ -124,5 +124,5 @@ publishable to PyPI and the distribution is publishable to GHCR.
 - TestPyPI / PyPI trusted-publisher registration must be performed once
   per package by a maintainer before `publish-pypi.yml` will succeed.
 
-[Unreleased]: https://github.com/comviva-oss/project-agi/compare/v1.0.0-rc1...HEAD
-[1.0.0-rc1]: https://github.com/comviva-oss/project-agi/releases/tag/v1.0.0-rc1
+[Unreleased]: https://github.com/margadeshaka/project-agi/compare/v1.0.0-rc1...HEAD
+[1.0.0-rc1]: https://github.com/margadeshaka/project-agi/releases/tag/v1.0.0-rc1

@@ -22,8 +22,8 @@ Credits are appropriate for:
 - A duplicate charge that the customer has not yet been refunded for.
 - A documented service outage in the customer's coverage area that
   affected the billing period.
-- A roaming charge incurred while the customer was demonstrably outside
-  the operator's network for under one hour due to a known incident.
+- A usage charge incurred during a documented service incident on the
+  provider's side.
 
 Credits are NOT appropriate for:
 

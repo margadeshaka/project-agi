@@ -76,7 +76,7 @@ working.
 
 ```
 /etc/agi/packs/
-  bluemarble/
+  acme/
     pack.yaml           # slug, version, name, declared model roles
     tools.yaml          # tool allowlist
     prompts/

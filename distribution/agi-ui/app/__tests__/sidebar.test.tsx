@@ -95,7 +95,7 @@ describe('Sidebar / isVisible', () => {
   });
 
   it('operator:<slug> sees Health + Packs + UseCases and nothing else', () => {
-    const set = visibleSet(['agi:operator:telco-demo']);
+    const set = visibleSet(['agi:operator:care-demo']);
     expect(set.sort()).toEqual(['Health', 'Packs', 'UseCases'].sort());
   });
 
@@ -105,14 +105,14 @@ describe('Sidebar / isVisible', () => {
   });
 
   it('combined operator + viewer scopes union visibility', () => {
-    const set = visibleSet(['agi:operator:telco-demo', 'agi:viewer']);
+    const set = visibleSet(['agi:operator:care-demo', 'agi:viewer']);
     expect(set.sort()).toEqual(
       ['Audit', 'Health', 'LLM', 'Packs', 'Tools', 'UseCases'].sort(),
     );
   });
 
   it('hides admin sub-items from anyone without agi:admin', () => {
-    for (const role of ['agi:viewer', 'agi:dev', 'agi:operator:telco-demo']) {
+    for (const role of ['agi:viewer', 'agi:dev', 'agi:operator:care-demo']) {
       const set = visibleSet([role]);
       expect(set).not.toContain('Log');
       expect(set).not.toContain('Users');

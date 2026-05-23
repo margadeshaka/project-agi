@@ -2,7 +2,7 @@
 
 > OpenAPI 3 → MCP tool bundle generator. **First-class repo**, not a utility buried in core.
 
-Generalised from the v0 BlueMarble `mcpfyer`. Points at any OpenAPI 3.0/3.1 spec and emits a versioned bundle of MCP tool descriptors plus an MCP server stub that exposes them. TMF is one example consumer — there is no TMF-specific code in here.
+Points at any OpenAPI 3.0/3.1 spec and emits a versioned bundle of MCP tool descriptors plus an MCP server stub that exposes them. TMF is one example consumer — there is no TMF-specific code in here.
 
 ## Quickstart
 

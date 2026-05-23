@@ -20,7 +20,7 @@ from .conftest import bearer_for
 def test_trail_filter_by_pack(client: TestClient) -> None:
     sink = client.app.state.runtime.trail_sink
 
-    # Seed three events: two for pack 'acme', one for 'bluemarble'.
+    # Seed three events: two for pack 'acme', one for 'fleet-demo'.
     import asyncio
 
     async def _seed() -> None:
@@ -45,7 +45,7 @@ def test_trail_filter_by_pack(client: TestClient) -> None:
         await sink.write(
             new_event(
                 correlation_id="corr-3",
-                pack_slug="bluemarble",
+                pack_slug="fleet-demo",
                 session_id="s3",
                 event_type="llm.call",
                 payload={"step": 1},
