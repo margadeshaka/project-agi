@@ -59,12 +59,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # We try a maintainer-supplied PAT first (secrets.GHCR_TOKEN with
+      # write:packages scope), and fall back to the auto-provisioned
+      # GITHUB_TOKEN. Some enterprise orgs disable workflow-write at the
+      # policy level — in that case GHCR_TOKEN is the only way to push.
+      # If neither works, the build step still runs (build-only mode) so
+      # contributors can verify Dockerfile changes without a registry push.
+      - name: Detect GHCR auth method
+        id: ghcr_auth
+        run: |
+          if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+            echo "method=pat" >> "$GITHUB_OUTPUT"
+            echo "Using maintainer-supplied GHCR_TOKEN PAT."
+          else
+            echo "method=github-token" >> "$GITHUB_OUTPUT"
+            echo "Falling back to GITHUB_TOKEN. Push may fail if the org policy disables it."
+          fi
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ steps.ghcr_auth.outputs.method == 'pat' && secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Compute image metadata
         id: meta
@@ -81,7 +98,12 @@ jobs:
           flavor: |
             latest=auto
 
+      # Try push first. If the org policy denies the GITHUB_TOKEN-based
+      # registry write, the build still runs as a "verification only"
+      # mode below — the workflow stays green so PR CI keeps signal.
       - name: Build and push
+        id: buildpush
+        continue-on-error: true
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
@@ -95,8 +117,27 @@ jobs:
           # Multi-arch (linux/arm64) is deferred — agi-runtime depends on
           # litellm wheels that don't ship arm64-native for every version.
 
-      - name: Summarise pushed tags
+      - name: Build only (push denied — verification mode)
+        if: steps.buildpush.outcome == 'failure'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          platforms: linux/amd64
+
+      - name: Summarise outcome
         run: |
-          echo "Pushed image: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}"
-          echo "Tags:"
-          echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | sed 's/^/  - /'
+          if [ "${{ steps.buildpush.outcome }}" = "success" ]; then
+            echo "✅ Pushed: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}"
+            echo "Tags:"
+            echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | sed 's/^/  - /'
+          else
+            echo "⚠️  Push denied (likely enterprise workflow-permissions policy)."
+            echo "   The image was built successfully but not published."
+            echo "   To enable GHCR push, set a GHCR_TOKEN repo secret with write:packages scope."
+            echo "   See docs/deploy/p5-runbook.md §2 for the runbook."
+          fi

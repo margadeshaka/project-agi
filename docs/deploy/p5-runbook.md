@@ -41,20 +41,49 @@ If it fails:
 
 ### 2. Configure GHCR permissions (one-time)
 
-Before `publish-images.yml` can push, the repo and the org need:
+Before `publish-images.yml` can push, the repo (and possibly the org)
+needs one of these two paths:
+
+**Path A — repo workflow-write permission (preferred)**
 
 1. **Repo Settings → Actions → General → Workflow permissions**:
    - Set to **Read and write permissions**.
    - Tick **Allow GitHub Actions to create and approve pull requests** if
      you want release-bot PRs later (optional for v1).
-2. **Repo Settings → Packages**: confirm GHCR is enabled for this repo (it's
+
+   This grants the auto-provisioned `GITHUB_TOKEN` the `write:packages`
+   scope it needs to push to `ghcr.io`.
+
+**Path B — maintainer-supplied PAT (when org policy blocks Path A)**
+
+If your org has the "Workflow permissions" toggle disabled at the
+enterprise level (you'll see a Conflict 409 from the API or "denied"
+errors in workflow logs), use a Personal Access Token instead:
+
+1. Create a PAT at <https://github.com/settings/tokens>:
+   - Scopes: **`write:packages`** (and **`read:packages`** for completeness).
+   - Expiration: rotate per your security policy (90 days recommended).
+2. Add it to the repo as a secret named **`GHCR_TOKEN`**:
+   - **Repo Settings → Secrets and variables → Actions → New repository secret**.
+   - Name: `GHCR_TOKEN` · Value: `ghp_...` (the PAT you just created).
+3. The workflow auto-detects the secret and prefers it over `GITHUB_TOKEN`.
+
+**After either path:**
+
+1. **Repo Settings → Packages**: confirm GHCR is enabled for this repo (it's
    on by default for public repos).
-3. **Optional but recommended**: after the first push lands, visit
-   `https://github.com/<owner>/packages/container/<image>/settings` and:
-   - Set **Visibility** to **public** (so `docker pull ghcr.io/<owner>/<image>`
+2. **Optional but recommended**: after the first push lands, visit
+   `https://github.com/margadeshaka/project-agi/packages/container/<image>/settings`
+   and:
+   - Set **Visibility** to **public** (so `docker pull ghcr.io/margadeshaka/<image>`
      works without auth — matches the Apache-2.0 distribution stance).
    - Link the package to the `project-agi` repository so deletion is repo-
      scoped if you ever rebuild the workspace.
+
+> **Workflow fallback:** if neither Path A nor Path B is configured,
+> `publish-images.yml` enters "verification only" mode — the Docker
+> build still runs (so PR CI keeps signal) but the push step is skipped
+> with a clear warning in the run summary.
 
 ### 3. Trigger the first image publish
 
