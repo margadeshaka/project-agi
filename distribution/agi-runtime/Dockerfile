@@ -21,18 +21,22 @@ COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /usr/local/bin/uv
 
 WORKDIR /build
 
-# Workspace metadata first for layer caching.
+# Workspace metadata + lockfile first for layer caching.
 COPY pyproject.toml /build/pyproject.toml
+COPY uv.lock /build/uv.lock
 COPY distribution/agi-runtime/pyproject.toml /build/distribution/agi-runtime/pyproject.toml
 COPY distribution/agi-auth/pyproject.toml /build/distribution/agi-auth/pyproject.toml
 COPY packages/agi-sdk/pyproject.toml /build/packages/agi-sdk/pyproject.toml
 COPY packages/agi-core/pyproject.toml /build/packages/agi-core/pyproject.toml
+COPY packages/agi-mcpfyer/pyproject.toml /build/packages/agi-mcpfyer/pyproject.toml
 
-# Sources.
+# Sources. agi-mcpfyer is in the workspace because agi-runtime depends on
+# it via tool.uv.sources.workspace = true.
 COPY distribution/agi-runtime /build/distribution/agi-runtime
 COPY distribution/agi-auth /build/distribution/agi-auth
 COPY packages/agi-sdk /build/packages/agi-sdk
 COPY packages/agi-core /build/packages/agi-core
+COPY packages/agi-mcpfyer /build/packages/agi-mcpfyer
 
 RUN uv sync --package agi-runtime --frozen --no-dev || \
     uv sync --package agi-runtime --no-dev
@@ -52,7 +56,9 @@ WORKDIR /app
 COPY --from=builder /build/.venv /app/.venv
 COPY --from=builder /build/distribution/agi-runtime /app/distribution/agi-runtime
 COPY --from=builder /build/distribution/agi-auth /app/distribution/agi-auth
-COPY --from=builder /build/packages /app/packages
+COPY --from=builder /build/packages/agi-sdk /app/packages/agi-sdk
+COPY --from=builder /build/packages/agi-core /app/packages/agi-core
+COPY --from=builder /build/packages/agi-mcpfyer /app/packages/agi-mcpfyer
 
 USER agi
 EXPOSE 9000

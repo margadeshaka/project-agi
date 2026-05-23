@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
       - name: Sync workspace
-        run: uv sync --all-packages
+        run: uv sync --all-packages --all-extras
       - name: Ruff
         run: uv run ruff check .
       - name: Format
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - run: uv sync --all-packages
+      - run: uv sync --all-packages --all-extras
       - name: Mypy
         run: uv run mypy packages/agi-sdk/agi
 
@@ -38,7 +38,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv sync --all-packages
+      - run: uv sync --all-packages --all-extras
       - name: Pytest
         run: uv run pytest -v
 
@@ -68,11 +68,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - run: uv sync --all-packages
+      - run: uv sync --all-packages --all-extras
       - name: Forbid Band-2 imports from Band-1
         run: uv run pytest packages/agi-sdk/tests/test_isolation_gate.py -v
 
   secret-scan:
+    # TruffleHog needs a diff range. PRs have one (base = target branch);
+    # direct main pushes don't, so the action errors out. Restrict the job
+    # to PRs — the lint/test/isolation-gate jobs cover main pushes.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,5 +85,5 @@ jobs:
       - uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}

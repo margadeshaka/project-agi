@@ -145,6 +145,6 @@ jobs:
           echo "Package:   ${{ matrix.package }}"
           echo "Path:      ${{ matrix.path }}"
           echo "Trigger:   ${{ github.event_name }}"
-          echo "Target:    ${{ github.event_name == 'workflow_dispatch' && inputs.repository || 'pypi' }}"
+          echo "Target:    ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.repository || 'pypi' }}"
           echo "Artefacts:"
           ls -lh ${{ matrix.path }}/dist/ | sed 's/^/  /'
