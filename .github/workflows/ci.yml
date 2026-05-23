@@ -42,6 +42,27 @@ jobs:
       - name: Pytest
         run: uv run pytest -v
 
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: distribution/agi-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        run: npm ci
+      - name: Lint (next lint + no-hex)
+        run: npm run lint
+      - name: Type-check
+        run: npm run type-check
+      - name: Vitest
+        run: npm run test
+      # playwright (e2e) intentionally not gated in PR CI — runs in nightly only.
+      # TODO: wire up .github/workflows/e2e-nightly.yml for `npm run e2e`.
+
   isolation-gate:
     runs-on: ubuntu-latest
     steps:

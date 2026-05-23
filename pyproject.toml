@@ -43,6 +43,32 @@ disable_error_code = ["unused-ignore"]
 module = ["jose", "jose.*"]
 ignore_missing_imports = true
 
+# Pyright mirrors the sys.path workaround in conftest.py (see "Path resolution
+# oddity" in CLAUDE.md). Pyright doesn't execute conftest.py, so the workspace
+# package source dirs that resolve `agi.*` / `agi_core` / `agi_runtime` /
+# `agi_auth` / `agi_mcpfyer` imports must be declared here as extraPaths.
+[tool.pyright]
+extraPaths = [
+    "packages/agi-sdk",
+    "packages/agi-core",
+    "packages/agi-mcpfyer",
+    "distribution/agi-runtime",
+    "distribution/agi-auth",
+]
+include = ["packages", "distribution", "."]
+exclude = [
+    "**/__pycache__",
+    "**/.venv",
+    "**/node_modules",
+    ".claude",
+    ".smoke/runs",
+    ".smoke/deflect-runs",
+    ".smoke/bundles",
+    ".smoke/packs",
+]
+pythonVersion = "3.11"
+reportMissingImports = "error"
+
 [tool.pytest.ini_options]
 testpaths = ["packages/*/tests", "distribution/*/tests"]
 asyncio_mode = "auto"

@@ -23,6 +23,7 @@ on:
       - "packages/agi-sdk/**"
       - "packages/agi-core/**"
       - ".github/workflows/helm-kind.yml"
+  workflow_dispatch: {}
 
 jobs:
   install:
