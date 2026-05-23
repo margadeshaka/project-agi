@@ -138,3 +138,153 @@ def test_unknown_tool_404(client: TestClient) -> None:
         headers={"X-Pack": "acme", "Authorization": bearer_for("acme")},
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# _descriptor_summary fields (consumed by the FE tool catalogue table)
+# ---------------------------------------------------------------------------
+
+
+def _write_multi_bundle(root: Path) -> None:
+    """Write a bundle with one read-only + one write tool for summary tests."""
+    bundle_dir = root / "billing-v4"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "version": "ver-cafebabe",
+        "source": "fixture",
+        "generated_at": "2026-05-22T00:00:00Z",
+        "source_api": "Billing_v4",
+        "tool_count": 2,
+        "extras": {},
+    }
+    (bundle_dir / "manifest.json").write_text(json.dumps(manifest))
+    tools = [
+        {
+            "name": "billing.list_invoices",
+            "domain": "billing",
+            "description": "List invoices",
+            "input_schema": {"type": "object", "properties": {}},
+            "output_schema": None,
+            "side_effecting": False,
+            "rate_limit_class": "read",
+            "dry_run_supported": False,
+            "method": "GET",
+            "path_template": "/billing/v4/invoices",
+            "param_locations": {},
+            "source_api": "Billing_v4",
+            "source_operation": "listInvoices",
+        },
+        {
+            "name": "billing.adjust_charge",
+            "domain": "billing",
+            "description": "Adjust a charge",
+            "input_schema": {"type": "object", "properties": {}},
+            "output_schema": None,
+            "side_effecting": True,
+            "rate_limit_class": "write_high",
+            "dry_run_supported": True,
+            "method": "POST",
+            "path_template": "/billing/v4/charges/adjust",
+            "param_locations": {},
+            "source_api": "Billing_v4",
+            "source_operation": "adjustCharge",
+        },
+    ]
+    (bundle_dir / "tools.json").write_text(json.dumps(tools))
+
+
+def _summary_client(tmp_path: Path, monkeypatch, *, allowlists: dict[str, list[str]]) -> TestClient:
+    """Boot a TestClient with a real bundle + pre-seeded pack allow-lists."""
+    from agi.config import Pack
+    from agi_runtime.main import create_app
+    from agi_runtime.tool_bundles import BundleLoader
+
+    _write_multi_bundle(tmp_path)
+
+    async def fake_verify(request):  # type: ignore[no-untyped-def]
+        header = request.headers.get("Authorization", "")
+        token = header.split(" ", 1)[1].strip()
+        body = token.split(":", 1)[1]
+        if ":" in body:
+            tenant, scopes_raw = body.split(":", 1)
+            scopes = tuple(s for s in scopes_raw.split(",") if s)
+        else:
+            tenant, scopes = body, ("AGI_VIEWER",)
+        return dispatch_mod._Claims(sub="t", tenant_id=tenant, scopes=scopes)
+
+    monkeypatch.setattr(dispatch_mod, "_verify_request_claims", fake_verify)
+    app = create_app()
+    c = TestClient(app)
+    c.__enter__()
+    loader = BundleLoader(tmp_path)
+    loader.load_all()
+    app.state.runtime.bundle_loader = loader
+    for slug, allow in allowlists.items():
+        app.state.runtime.pack_loader._cache[slug] = Pack(  # noqa: SLF001
+            slug=slug,
+            version="1.0.0",
+            name=slug.title(),
+            tool_allowlist=allow,
+            metadata={},
+        )
+        app.state.runtime.pack_loader._shas[slug] = f"sha-{slug}"  # noqa: SLF001
+    return c
+
+
+def test_descriptor_summary_includes_bundle_version(tmp_path: Path, monkeypatch) -> None:
+    c = _summary_client(tmp_path, monkeypatch, allowlists={"acme": []})
+    try:
+        resp = c.get(
+            "/tools",
+            headers={"X-Pack": "acme", "Authorization": bearer_for("acme")},
+        )
+        assert resp.status_code == 200, resp.text
+        tools = resp.json()["tools"]
+        for t in tools:
+            assert "bundle_version" in t
+            assert t["bundle_version"] == "ver-cafebabe"
+    finally:
+        c.__exit__(None, None, None)
+
+
+def test_descriptor_summary_includes_consuming_pack_count(tmp_path: Path, monkeypatch) -> None:
+    c = _summary_client(
+        tmp_path,
+        monkeypatch,
+        allowlists={
+            "acme": ["billing.list_invoices"],
+            "beta": ["billing.list_invoices", "billing.adjust_charge"],
+            "gamma": [],
+        },
+    )
+    try:
+        resp = c.get(
+            "/tools",
+            headers={"X-Pack": "acme", "Authorization": bearer_for("acme")},
+        )
+        assert resp.status_code == 200, resp.text
+        by_name = {t["name"]: t for t in resp.json()["tools"]}
+        # billing.list_invoices is allow-listed by acme + beta → 2.
+        assert by_name["billing.list_invoices"]["consuming_pack_count"] == 2
+        # billing.adjust_charge only by beta → 1.
+        assert by_name["billing.adjust_charge"]["consuming_pack_count"] == 1
+    finally:
+        c.__exit__(None, None, None)
+
+
+def test_descriptor_summary_includes_dry_run_supported(tmp_path: Path, monkeypatch) -> None:
+    c = _summary_client(tmp_path, monkeypatch, allowlists={"acme": []})
+    try:
+        resp = c.get(
+            "/tools",
+            headers={"X-Pack": "acme", "Authorization": bearer_for("acme")},
+        )
+        assert resp.status_code == 200, resp.text
+        by_name = {t["name"]: t for t in resp.json()["tools"]}
+        # write tool with explicit dry-run flag → True.
+        assert by_name["billing.adjust_charge"]["dry_run_supported"] is True
+        # read tool — descriptor sets ``False`` explicitly, summary should
+        # surface ``True`` because read-only tools are trivially dry-runnable.
+        assert by_name["billing.list_invoices"]["dry_run_supported"] is True
+    finally:
+        c.__exit__(None, None, None)

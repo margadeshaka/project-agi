@@ -366,6 +366,142 @@ def test_settings_includes_version_and_env(configured: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# /admin/use-cases
+# ---------------------------------------------------------------------------
+
+
+def _seed_use_cases(state: RuntimeState) -> None:
+    """Mutate the pre-seeded telco/fleet packs so they declare ``use_cases``."""
+    telco = state.pack_loader.get("telco-demo")
+    fleet = state.pack_loader.get("fleet-demo")
+    assert telco is not None and fleet is not None
+    # bill_explainer lives on both packs (same name+version) — must aggregate.
+    telco.metadata["use_cases"] = [
+        {
+            "name": "bill_explainer",
+            "version": "0.3.0",
+            "tools": ["billing.list_invoices", "billing.adjust_charge", "billing.suspend_line"],
+        },
+        {
+            "name": "deflect",
+            "version": "1.0.0",
+            "tools": ["faq.lookup"],
+        },
+    ]
+    fleet.metadata["use_cases"] = [
+        {
+            "name": "bill_explainer",
+            "version": "0.3.0",
+            "tools": ["billing.list_invoices", "billing.adjust_charge"],
+        },
+        {
+            "name": "route_incident",
+            "version": "0.2.0",
+            "tools": ["fleet.list_vehicles", "fleet.flag_incident"],
+        },
+    ]
+
+
+def test_use_cases_returns_flat_service_list(configured: TestClient) -> None:
+    """Response is ``{use_cases: [...], langfuse_url}`` — not the legacy
+    ``{pack, packs: [...]}`` shape the FE never consumed."""
+    _seed_use_cases(configured.app.state.runtime)
+    resp = configured.get(
+        "/admin/use-cases",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "use_cases" in body and isinstance(body["use_cases"], list)
+    assert "langfuse_url" in body
+    # Shape: every row carries the keys the FE ToolSummary-shaped use-case row needs.
+    for row in body["use_cases"]:
+        for key in ("name", "version", "packs", "health", "tool_count"):
+            assert key in row, f"missing key {key} in {row}"
+        assert all(isinstance(p, dict) and "slug" in p for p in row["packs"])
+        assert row["health"] == "ok"
+
+
+def test_use_cases_aggregates_across_packs(configured: TestClient) -> None:
+    """A use-case offered by N packs becomes a single row with len(packs)=N."""
+    _seed_use_cases(configured.app.state.runtime)
+    resp = configured.get(
+        "/admin/use-cases",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    body = resp.json()
+    rows_by_name = {(r["name"], r["version"]): r for r in body["use_cases"]}
+    bill = rows_by_name[("bill_explainer", "0.3.0")]
+    pack_slugs = {p["slug"] for p in bill["packs"]}
+    assert pack_slugs == {"telco-demo", "fleet-demo"}
+    # tool_count is the max declared across packs — telco lists 3 tools.
+    assert bill["tool_count"] == 3
+    # Use-cases on a single pack stay single-row.
+    deflect = rows_by_name[("deflect", "1.0.0")]
+    assert [p["slug"] for p in deflect["packs"]] == ["telco-demo"]
+    assert deflect["tool_count"] == 1
+
+
+def test_use_cases_includes_langfuse_url_when_configured(
+    configured: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_use_cases(configured.app.state.runtime)
+    monkeypatch.setenv("LANGFUSE_HOST", "https://langfuse.example.com")
+    resp = configured.get(
+        "/admin/use-cases",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.json()["langfuse_url"] == "https://langfuse.example.com"
+
+    monkeypatch.delenv("LANGFUSE_HOST", raising=False)
+    monkeypatch.delenv("AGI_LANGFUSE_URL", raising=False)
+    resp = configured.get(
+        "/admin/use-cases",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.json()["langfuse_url"] is None
+
+
+def test_use_cases_operator_filtered(configured: TestClient) -> None:
+    """``agi:operator:<slug>`` only sees use-cases offered by their own pack."""
+    _seed_use_cases(configured.app.state.runtime)
+    resp = configured.get(
+        "/admin/use-cases",
+        headers=_hdr("fleet-demo", "agi:operator:fleet-demo"),
+    )
+    assert resp.status_code == 200, resp.text
+    rows = resp.json()["use_cases"]
+    names = {r["name"] for r in rows}
+    # fleet-demo only — telco-only ``deflect`` must not leak in.
+    assert "deflect" not in names
+    # bill_explainer appears (fleet declares it) but only fleet-demo in packs.
+    bill = next(r for r in rows if r["name"] == "bill_explainer")
+    assert [p["slug"] for p in bill["packs"]] == ["fleet-demo"]
+    assert "route_incident" in names
+
+
+def test_use_cases_admin_sees_all(configured: TestClient) -> None:
+    """Admin and viewer both see every use-case across every loaded pack."""
+    _seed_use_cases(configured.app.state.runtime)
+    for scope in ("agi:admin", "agi:viewer"):
+        resp = configured.get(
+            "/admin/use-cases",
+            headers=_hdr("telco-demo", scope),
+        )
+        assert resp.status_code == 200, resp.text
+        rows = resp.json()["use_cases"]
+        names = {r["name"] for r in rows}
+        assert names == {"bill_explainer", "deflect", "route_incident"}, scope
+    # Bare caller without any qualifying scope → 403.
+    resp = configured.get(
+        "/admin/use-cases",
+        headers=_hdr("telco-demo"),
+    )
+    assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
 # /admin/llm/providers
 # ---------------------------------------------------------------------------
 

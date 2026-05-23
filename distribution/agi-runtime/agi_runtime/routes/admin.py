@@ -134,24 +134,67 @@ async def llm_bindings(request: Request) -> dict[str, Any]:
 
 @router.get("/use-cases")
 async def use_cases(request: Request) -> dict[str, Any]:
-    """List registered use-case slugs/versions per loaded pack."""
+    """List registered use-case services aggregated across loaded packs.
+
+    Scope rule (ADMIN_CONSOLE.md §4): ``agi:admin`` and ``agi:viewer`` see
+    every (name, version) pair across every loaded pack; ``agi:operator:<slug>``
+    sees only the services their pack offers. Anything else → 403.
+
+    Pack-side use-case shape (``pack.metadata.use_cases``) is a list of
+    ``{name, version, tools: [...]}`` dicts; packs that didn't declare any
+    contribute nothing. ``health`` is hard-coded ``"ok"`` until P5 wires a
+    live probe (no telemetry yet to drive it).
+    """
+    scopes = _scopes_of(request)
+    op_slugs = _operator_slugs(scopes)
+    if not (_is_admin(scopes) or _is_viewer(scopes) or op_slugs):
+        raise HTTPException(status_code=403, detail="admin, viewer, or operator scope required")
+    privileged = _is_admin(scopes) or _is_viewer(scopes)
+
     runtime: RuntimeState = request.app.state.runtime
-    out: list[dict[str, Any]] = []
+    # Aggregate by (name, version): packs that offer the same service show up
+    # as multiple entries in ``packs`` rather than duplicating the row.
+    aggregated: dict[tuple[str, str], dict[str, Any]] = {}
     for slug in runtime.pack_loader.list_slugs():
+        if not privileged and slug not in op_slugs:
+            continue
         pack = runtime.pack_loader.get(slug)
         if pack is None:
             continue
-        # Use-cases are declared in pack.yaml under ``use_cases:``. Surface
-        # whatever shape is on disk — packs that didn't declare any return [].
-        use_cases_raw = pack.metadata.get("use_cases") if pack.metadata else None
-        out.append(
-            {
-                "pack": slug,
-                "version": pack.version,
-                "use_cases": list(use_cases_raw) if isinstance(use_cases_raw, list) else [],
-            }
-        )
-    return {"pack": request.state.pack.slug, "packs": out}
+        raw = pack.metadata.get("use_cases") if pack.metadata else None
+        if not isinstance(raw, list):
+            continue
+        for uc in raw:
+            if not isinstance(uc, dict):
+                continue
+            name = uc.get("name")
+            version = uc.get("version")
+            if not isinstance(name, str) or not isinstance(version, str):
+                continue
+            key = (name, version)
+            entry = aggregated.get(key)
+            tool_list = uc.get("tools") if isinstance(uc.get("tools"), list) else []
+            if entry is None:
+                aggregated[key] = {
+                    "name": name,
+                    "version": version,
+                    "packs": [{"slug": slug}],
+                    "health": "ok",
+                    "tool_count": len(tool_list),
+                }
+            else:
+                if not any(p["slug"] == slug for p in entry["packs"]):
+                    entry["packs"].append({"slug": slug})
+                # Keep the largest declared tool_count across packs — services
+                # that allow-list a superset on one pack still surface their
+                # full tool span here.
+                entry["tool_count"] = max(entry["tool_count"], len(tool_list))
+
+    langfuse_url = os.environ.get("LANGFUSE_HOST") or os.environ.get("AGI_LANGFUSE_URL")
+    return {
+        "use_cases": sorted(aggregated.values(), key=lambda u: (u["name"], u["version"])),
+        "langfuse_url": langfuse_url,
+    }
 
 
 @router.get("/log")

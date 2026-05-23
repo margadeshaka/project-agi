@@ -28,9 +28,20 @@ async def list_tools(request: Request) -> dict[str, Any]:
     """Cross-pack catalogue — every tool every bundle exposes."""
     runtime: RuntimeState = request.app.state.runtime
     descriptors = runtime.bundle_loader.all_descriptors()
+    # Pre-compute pack allow-lists once so ``consuming_pack_count`` is O(packs)
+    # not O(packs × tools).
+    pack_allowlists: list[set[str]] = []
+    for slug in runtime.pack_loader.list_slugs():
+        pack = runtime.pack_loader.get(slug)
+        if pack is None:
+            continue
+        pack_allowlists.append({t for t in (pack.tool_allowlist or []) if isinstance(t, str)})
     return {
         "pack": request.state.pack.slug,
-        "tools": [_descriptor_summary(d) for d in descriptors],
+        "tools": [
+            _descriptor_summary(d, runtime=runtime, pack_allowlists=pack_allowlists)
+            for d in descriptors
+        ],
     }
 
 
@@ -94,14 +105,48 @@ async def invoke_tool(
 # ---- formatting helpers ---------------------------------------------------
 
 
-def _descriptor_summary(descriptor: Any) -> dict[str, Any]:
-    """Compact view used by ``GET /tools``."""
+def _descriptor_summary(
+    descriptor: Any,
+    *,
+    runtime: RuntimeState | None = None,
+    pack_allowlists: list[set[str]] | None = None,
+) -> dict[str, Any]:
+    """Compact view used by ``GET /tools``.
+
+    Extra fields the FE catalogue depends on:
+
+    * ``bundle_version`` — pulled from the source bundle's manifest.
+    * ``consuming_pack_count`` — how many loaded packs allow-list this tool.
+    * ``dry_run_supported`` — descriptor flag (set when the OpenAPI op carried
+      ``x-dry-run: true``); falls back to ``not side_effecting`` since
+      read-only tools are dry-run trivially-safe.
+    """
+    name = descriptor.name
+    side_effecting = bool(getattr(descriptor, "side_effecting", False))
+    # Read-only tools are trivially dry-runnable (calling them with arbitrary
+    # args is a no-op upstream), so default to ``True`` when ``side_effecting``
+    # is ``False``. Side-effecting tools require the bundle author to opt in
+    # via the explicit ``dry_run_supported`` flag on the descriptor.
+    explicit_dry_run = bool(getattr(descriptor, "dry_run_supported", False))
+    dry_run_supported = explicit_dry_run or not side_effecting
+
+    bundle_version = ""
+    if runtime is not None:
+        bundle_version = runtime.bundle_loader.bundle_version_for(name)
+
+    consuming_pack_count = 0
+    if pack_allowlists is not None:
+        consuming_pack_count = sum(1 for allow in pack_allowlists if name in allow)
+
     return {
-        "name": descriptor.name,
+        "name": name,
         "domain": getattr(descriptor, "domain", ""),
         "description": getattr(descriptor, "description", "") or "",
-        "side_effecting": bool(getattr(descriptor, "side_effecting", False)),
+        "side_effecting": side_effecting,
         "rate_limit_class": getattr(descriptor, "rate_limit_class", ""),
+        "bundle_version": bundle_version,
+        "consuming_pack_count": consuming_pack_count,
+        "dry_run_supported": dry_run_supported,
     }
 
 

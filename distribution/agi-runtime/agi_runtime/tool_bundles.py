@@ -93,6 +93,19 @@ class BundleLoader:
         entry = self._tools_by_name.get(name)
         return entry[1] if entry else None
 
+    def bundle_version_for(self, name: str) -> str:
+        """Return the ``version`` of the bundle that contributed tool ``name``.
+
+        Empty string if the tool isn't loaded or the bundle has no version
+        (defensive — bundles built by :mod:`agi_mcpfyer` always carry one).
+        """
+        entry = self._tools_by_name.get(name)
+        if entry is None:
+            return ""
+        bundle_id, _ = entry
+        bundle = self._bundles.get(bundle_id)
+        return str(getattr(bundle, "version", "")) if bundle is not None else ""
+
     async def dispatch(
         self,
         name: str,
