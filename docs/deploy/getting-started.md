@@ -3,50 +3,132 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Getting started — local + Kubernetes
+# Getting started
 
-This doc walks you from a clean machine to a running project-agi
-deployment. Two paths are supported out of the box:
+project-agi has two entry points. Pick the one that matches your goal:
 
-- **Docker Compose** — single-host, good for laptops and demos.
-- **Helm on kind / a real cluster** — production-shaped, what CI tests.
+- **SDK path** — embed `agi-sdk` in your own service. No FastAPI, no UI, no Docker required. ~5 minutes.
+- **Turnkey path** — bring up the full reference stack (runtime + UI + Mongo + Qdrant + Langfuse + OTel) with `docker compose`. ~5 minutes after the first image pull.
+
+If you have never seen project-agi before, start with the SDK path.
 
 ---
 
-## Path A — Docker Compose
+## SDK path — `pip install` to first invocation
+
+### 1. Install
+
+From PyPI (once v1.0 ships):
 
 ```bash
-git clone https://github.com/comviva-oss/project-agi
+pip install agi-sdk
+```
+
+Or from a checkout of this repo (the workflow most contributors use):
+
+```bash
+git clone https://github.com/<org>/project-agi
 cd project-agi
-docker compose -f deploy/docker-compose.yaml up -d
+pip install -e packages/agi-sdk
+```
+
+### 2. Pick a pack
+
+A pack is a folder of YAML/J2/JSON describing one tenant's tools, prompts, KB, and model bindings. Copy one of the demonstrators, or start from the blank template:
+
+```bash
+cp -r packs/telco-demo                  ./my-pack       # full-featured demo
+# or
+cp -r packages/agi-packs/blank          ./my-pack       # empty skeleton
+```
+
+Edit `my-pack/pack.yaml` to set your pack `slug` and at least one model role binding.
+
+### 3. Write a use case
+
+```python
+# bill_explainer.py
+import litellm
+from agi_sdk import use_case, serve
+
+@use_case("bill_explainer", version="0.3.0")
+class BillExplainer:
+    def __init__(self, sdk):
+        self.sdk       = sdk
+        self.reasoning = sdk.models.binding("reasoning")
+        self.billing   = sdk.mcp.tool("billing.adjust_charge")
+
+    async def handle(self, request, ctx):
+        prompt   = self.sdk.prompts.get("explain_bill").render(**request.payload)
+        response = await litellm.acompletion(
+            messages=[{"role": "user", "content": prompt}],
+            **self.reasoning.kwargs(),
+        )
+        return response
+
+if __name__ == "__main__":
+    serve(BillExplainer, http=True)
+```
+
+### 4. Run it
+
+```bash
+AGI_PACK_DIR=./my-pack python bill_explainer.py
+```
+
+Then in another shell:
+
+```bash
+curl http://localhost:9000/v1/info
+curl -X POST http://localhost:9000/v1/invoke \
+  -H 'Content-Type: application/json' \
+  -d '{"use_case": "bill_explainer", "payload": {"account_id": "A123"}}'
+```
+
+That's it. The SDK takes one pack at a time — multi-pack `X-Pack` dispatch is the runtime's job (next section).
+
+---
+
+## Turnkey path — the full reference stack
+
+For multi-tenant deployments, the admin console, X-Pack dispatch, Langfuse traces, and the audit trail:
+
+```bash
+git clone https://github.com/<org>/project-agi
+cd project-agi/deploy/docker
+docker compose up -d
 ```
 
 What you get:
 
-- `agi-runtime` on `http://localhost:9000`
+- `agi-runtime` on `http://localhost:9000` (FastAPI + MCP + claims-validated X-Pack dispatch)
 - `agi-ui` admin console on `http://localhost:8080`
-- MongoDB, Qdrant, and a Keycloak realm wired up
-- The bundled `packs/telco-demo` pack mounted into the runtime
+- MongoDB, Qdrant, Langfuse, OTel collector — all pre-wired
+- The bundled `packs/telco-demo` and `packs/fleet-demo` packs mounted into the runtime
 
 Verify:
 
 ```bash
 curl http://localhost:9000/healthz
 curl http://localhost:9000/readyz
+open http://localhost:8080
 ```
 
-Switch packs by editing `deploy/docker-compose.yaml` and pointing the
-runtime's `/packs` mount at `packs/fleet-demo`.
+Switch packs at request time with the `X-Pack` header:
+
+```bash
+curl -H 'X-Pack: fleet-demo' http://localhost:9000/v1/info
+```
 
 Tear down:
 
 ```bash
-docker compose -f deploy/docker-compose.yaml down -v
+docker compose down -v
 ```
 
 ---
 
-## Path B — Helm on kind
+## Helm on kind (production-shaped)
 
 Prerequisites: Docker, `kind` >= 0.24, `kubectl`, `helm` >= 3.16.
 
@@ -70,20 +152,8 @@ helm install agi distribution/agi-chart \
   --set observability.otelCollector.enabled=false \
   --set networkPolicy.enabled=false \
   --wait
-```
 
-Run the bundled Helm smoke test:
-
-```bash
 helm test agi --namespace agi --logs
-```
-
-Mount a real pack:
-
-```bash
-helm upgrade agi distribution/agi-chart \
-  --reuse-values \
-  --set-file packs.config=packs/telco-demo/pack.yaml
 ```
 
 Tear down:
@@ -98,5 +168,6 @@ kind delete cluster --name agi
 ## What to read next
 
 - `docs/deploy/helm.md` — every `values.yaml` field documented.
-- `docs/deploy/hotfix.md` — pack hotfix lane.
-- `docs/packs/authoring.md` — how a pack is built.
+- `docs/deploy/hotfix.md` — pack hotfix lane (≤15 min merge-to-live target).
+- `docs/packs/authoring.md` — how a pack is built end-to-end.
+- `ARCHITECTURE.md` — three-layer model, X-Pack dispatch, AI-Trail schema.

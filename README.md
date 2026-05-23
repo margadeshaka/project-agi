@@ -55,18 +55,20 @@ open http://localhost:8080
 
 ## Status
 
-**Currently in development (P1 / P1.5 closure in flight, P2 / P3 complete, P4–P5 scaffolded).** Not yet ready for production. See `EXECUTION_PLAN.html` for the 14-week plan to v1.0.
+**P0–P5 complete in-repo; P6 (v1.0 release prep) in flight.** See `EXECUTION_PLAN.html` for the original 14-week plan to v1.0.
 
-| Phase | Scope | Status | Note |
-|---|---|---|---|
-| P0 | Public repo scaffold | Done | LICENSE, CI, isolation gate, uv workspace in place |
-| P1 | agi-sdk shell port from v0 | Scaffolded | `serve.py` `/v1/invoke` still a stub; closing in current sprint |
-| P1.5 | Orchestrator adapters (LangGraph, Pydantic-AI) | Scaffolded | LangGraph `checkpoint_saver` NotImplemented; closing in current sprint |
-| P2 | agi-mcpfyer (OpenAPI → MCP) | Done | CLI + generator with 2 test files passing |
-| P3 | agi-runtime FastAPI shell | Done | Claims-validated X-Pack dispatch; 24 runtime tests pass |
-| P4 | agi-ui admin console | Scaffolded | Next.js admin pages exist; FE not yet in CI; pages mostly read-only stubs |
-| P5 | Reference packs + Helm chart | Scaffolded | Chart + 2 demo packs exist; helm-kind CI not yet verified green on main |
-| P6 | care-intelligence retrofit + v1.0 | Not started | — |
+| Phase | Scope | Status |
+|---|---|---|
+| P0 | Public repo scaffold | Done |
+| P1 | agi-sdk shell + dispatch seam | Done |
+| P1.5 | Orchestrator adapters (LangGraph, Pydantic-AI) | Done |
+| P2 | agi-mcpfyer (OpenAPI → MCP) | Done |
+| P3 | agi-runtime + claims-validated X-Pack dispatch | Done |
+| P4a | Admin UI shell + NextAuth + read-only screens | Done |
+| P4b | Tool catalogue + form-from-schema + use-case Langfuse | Done |
+| P4c | Audit virtualisation + CSV export + KB reindex SSE | Done |
+| P5 | Helm chart green + GHCR publishing + `/chat` helm-test | Done (in-repo); human-blocked steps in `docs/deploy/p5-runbook.md` |
+| **P6** | **v1.0 release prep: PyPI publish, docs polish, version freeze** | **In flight** |
 
 ## The design
 
@@ -102,6 +104,17 @@ The reference packs ship two verticals (`telco-demo`, `fleet-demo`) only as demo
 | **Public sector** | Form-fill helper, eligibility explainer | Plain async |
 
 See `ORCHESTRATOR_RESEARCH.md` for the orchestrator-by-use-case-shape decision tree. Choose by shape, not by industry.
+
+## Roadmap after v1.0
+
+Deferred to v1.1 and beyond:
+
+- **Multi-arch container images** — add `linux/arm64` to the GHCR publish matrix.
+- **Image signing + provenance** — cosign signatures and SLSA provenance attestations on every published image.
+- **Helm OCI publish** — chart pushed to `oci://ghcr.io/<owner>/agi` alongside the container images.
+- **Real Mongo / Postgres trail sink** — live-probe health surfaced in `/admin/use-cases` (current sink is in-memory + file-jsonl).
+- **Eval harness wrapper depth** — decide whether to ship a thin Promptfoo wrapper or document direct Promptfoo usage against the AI-Trail.
+- **Care-intelligence as a downstream consumer** — validation that the architecture survives a real solution module. This is a *consumer* of project-agi, not part of the framework's roadmap; it is tracked in the care-intelligence repo, not here.
 
 ## Contributing
 

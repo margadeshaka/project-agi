@@ -1,5 +1,8 @@
 # project-agi — open-source plan
 
+> **Historical design doc** — see `README.md` for the current open-source v1.0 framing. Stale references to "care-intelligence retrofit" in this file reflect early-2026 scoping when project-agi was an internal spin-out; the current intent is from-scratch open-source for the open world.
+
+
 **Owner:** hitesh.gupta@comviva.com
 **Created:** 2026-05-22
 **Status:** Draft for review

@@ -119,4 +119,4 @@ Items deferred to the human / a later phase:
 
 When all three rows in **First-green status** carry real SHAs and the
 acceptance checklist is fully ticked, **Phase gate 3 closes** and P6
-(care-intelligence retrofit + v1.0 cut) is unblocked.
+(v1.0 release prep — PyPI publish, docs polish, version freeze) is unblocked.

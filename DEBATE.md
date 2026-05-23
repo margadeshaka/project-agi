@@ -1,5 +1,8 @@
 # project-agi — design debate transcript
 
+> **Historical design doc** — see `README.md` for the current open-source v1.0 framing. Stale references to "care-intelligence retrofit" in this file reflect early-2026 scoping when project-agi was an internal spin-out; the current intent is from-scratch open-source for the open world.
+
+
 **Date:** 2026-05-22
 **Format:** Two parallel advocates, two rounds each, plus an independent orchestration research brief. Synthesis lives in `RESOLVED_STACK.md`.
 

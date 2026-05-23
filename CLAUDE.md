@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repo identity
 
-`project-agi` — Apache-2.0 open-source agent-intelligence stack. Vertical-agnostic; SDK is the product, runtime/UI/chart are the supported reference distribution. Status: **Phase 0–1 in development** (see `EXECUTION_PLAN.html` for the 14-week plan to v1.0).
+`project-agi` — Apache-2.0 open-source agent-intelligence stack, built from scratch for the open world (not a retrofit of any internal stack). Vertical-agnostic; SDK is the product, runtime/UI/chart are the supported reference distribution. Status: **P0–P5 complete in-repo, P6 (v1.0 release prep) in flight** (see `EXECUTION_PLAN.html` for the original 14-week plan to v1.0).
+
+> **Note on care-intelligence:** care-intelligence is a *future downstream consumer* of project-agi, not a retrofit target. The architectural lineage is documented in the final paragraph of `ARCHITECTURE.md` — patterns from the prior internal stack informed the open-source design, but project-agi is not built to absorb care-intelligence code.
 
 ## Workspace layout (uv workspace, two bands)
 
@@ -123,7 +125,20 @@ Each adapter is ~150 LOC; their only job is to set OpenLLMetry baggage (`bm.pack
 
 ## Status / phase awareness
 
-`README.md` lists current phase progress (P0–P6). When asked about features, check phase status before promising — most band-2 components are not feature-complete yet. `EXECUTION_PLAN.html` has the Gantt and gates.
+`README.md` lists current phase progress. When asked about features, check phase status before promising. `EXECUTION_PLAN.html` has the original Gantt and gates (historical — see banner on that file).
+
+| Phase | Scope | Status |
+|---|---|---|
+| P0 | Public repo scaffold | Done |
+| P1 | agi-sdk shell + dispatch seam | Done |
+| P1.5 | Orchestrator adapters (LangGraph, Pydantic-AI) | Done |
+| P2 | agi-mcpfyer (OpenAPI → MCP) | Done |
+| P3 | agi-runtime + claims-validated X-Pack dispatch | Done |
+| P4a | Admin UI shell + NextAuth + read-only screens | Done |
+| P4b | Tool catalogue + form-from-schema + use-case Langfuse | Done |
+| P4c | Audit virtualisation + CSV export + KB reindex SSE | Done |
+| P5 | Helm chart green + GHCR publishing + `/chat` helm-test | Done (in-repo); human-blocked steps in `docs/deploy/p5-runbook.md` |
+| **P6** | **v1.0 release prep: PyPI publish, docs polish, version freeze** | **In flight** |
 
 ## Definition-of-done signals
 

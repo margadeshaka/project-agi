@@ -1,5 +1,8 @@
 # project-agi — resolved stack
 
+> **Historical design doc** — see `README.md` for the current open-source v1.0 framing. Stale references to "care-intelligence retrofit" in this file reflect early-2026 scoping when project-agi was an internal spin-out; the current intent is from-scratch open-source for the open world.
+
+
 **Date:** 2026-05-22
 **Inputs:** `PLAN.html` v2, `ADMIN_CONSOLE.md`, full debate transcript in `DEBATE.md` (Framework Advocate + Platform Advocate, two rounds), and an independent orchestration research brief.
 **Status:** Decisions taken on the three unresolved questions; everything the two sides converged on is now ratified.

@@ -186,6 +186,8 @@ Highest wins:
 
 ## Comparison table
 
+> **Framing note.** care-intelligence is the *prior internal stack* whose patterns informed the open-source design here — it is **not** a retrofit target for project-agi. The table below is kept as historical lineage so a reader can see which architectural moves are new and which were ratified by an earlier production system. The final paragraph below this table records the intended direction: care-intelligence eventually becomes a *consumer* of project-agi, validating that the framework survives contact with a real solution module.
+
 | Concern | care-intelligence (today) | project-agi (target) |
 |---|---|---|
 | Coupling to a CRM | Yes (customer/ticket/case/billing domains) | None. Domains live in packs, not core. |

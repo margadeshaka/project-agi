@@ -1,5 +1,8 @@
 # Orchestrator research — agent loops in project-agi
 
+> **Historical design doc** — see `README.md` for the current open-source v1.0 framing. Stale references to "care-intelligence retrofit" in this file reflect early-2026 scoping when project-agi was an internal spin-out; the current intent is from-scratch open-source for the open world.
+
+
 **Date:** 2026-05-22
 **Status:** Research brief that drove decision R8 in `RESOLVED_STACK.md`
 **Outcome:** Plain `async def` is the default; `langgraph` and `pydantic_ai` ship as blessed-but-optional adapters in `sdk.orchestrators`. Plain async + two blessed options keeps "library-first" credible.
