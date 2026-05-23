@@ -630,9 +630,7 @@ def _to_wire_message(msg: Message) -> dict[str, Any]:
                 "function": {
                     "name": tc.name,
                     "arguments": (
-                        tc.arguments
-                        if isinstance(tc.arguments, str)
-                        else json.dumps(tc.arguments)
+                        tc.arguments if isinstance(tc.arguments, str) else json.dumps(tc.arguments)
                     ),
                 },
             }

@@ -55,18 +55,18 @@ open http://localhost:8080
 
 ## Status
 
-**Currently in development (Phase 0–1).** Not yet ready for production. See `EXECUTION_PLAN.html` for the 14-week plan to v1.0.
+**Currently in development (P1 / P1.5 closure in flight, P2 / P3 complete, P4–P5 scaffolded).** Not yet ready for production. See `EXECUTION_PLAN.html` for the 14-week plan to v1.0.
 
-| Phase | Scope | Status |
-|---|---|---|
-| P0 | Public repo scaffold | In progress |
-| P1 | agi-sdk shell port from v0 | In progress |
-| P1.5 | Orchestrator adapters (LangGraph, Pydantic-AI) | Not started |
-| P2 | agi-mcpfyer (OpenAPI → MCP) | Not started |
-| P3 | agi-runtime FastAPI shell | Not started |
-| P4 | agi-ui admin console | Not started |
-| P5 | Reference packs + Helm chart | Not started |
-| P6 | care-intelligence retrofit + v1.0 | Not started |
+| Phase | Scope | Status | Note |
+|---|---|---|---|
+| P0 | Public repo scaffold | Done | LICENSE, CI, isolation gate, uv workspace in place |
+| P1 | agi-sdk shell port from v0 | Scaffolded | `serve.py` `/v1/invoke` still a stub; closing in current sprint |
+| P1.5 | Orchestrator adapters (LangGraph, Pydantic-AI) | Scaffolded | LangGraph `checkpoint_saver` NotImplemented; closing in current sprint |
+| P2 | agi-mcpfyer (OpenAPI → MCP) | Done | CLI + generator with 2 test files passing |
+| P3 | agi-runtime FastAPI shell | Done | Claims-validated X-Pack dispatch; 24 runtime tests pass |
+| P4 | agi-ui admin console | Scaffolded | Next.js admin pages exist; FE not yet in CI; pages mostly read-only stubs |
+| P5 | Reference packs + Helm chart | Scaffolded | Chart + 2 demo packs exist; helm-kind CI not yet verified green on main |
+| P6 | care-intelligence retrofit + v1.0 | Not started | — |
 
 ## The design
 

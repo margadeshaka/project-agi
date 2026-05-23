@@ -9,6 +9,7 @@ Run from repo root:
 
     OLLAMA_API_BASE=http://localhost:11434 uv run python .smoke/sdk_ollama_smoke.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -19,7 +20,6 @@ from agi.config import Pack
 from agi.models import ModelBinding
 from agi.orchestrators.native import (
     FileJsonlCheckpointStore,
-    MemoryCheckpointStore,
     run_use_case,
 )
 from agi.trail import FileJsonlTrailSink

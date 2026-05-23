@@ -79,3 +79,6 @@ generated/
 
 # Claude Code design-package export (local working data)
 .design-pkg/
+
+# Claude Code session/worktree state
+.claude/

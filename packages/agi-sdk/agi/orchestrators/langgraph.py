@@ -21,6 +21,8 @@ LangGraph into RAM.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 from agi.config import Pack
@@ -84,17 +86,31 @@ def resolve_tools(pack: Pack, all_tools: list[dict[str, Any]]) -> list[dict[str,
     return [available[name] for name in pack.tool_allowlist if name in available]
 
 
-def checkpoint_saver(operator_config: Any) -> Any:
+def checkpoint_saver(operator_config: Any = None) -> Any:
     """Construct a LangGraph ``CheckpointSaver`` from operator config.
 
-    Phase 1 stub — Phase 3 reads ``operator_config.use_case['checkpointer']``
-    and returns the right Mongo / Postgres / SQLite saver. For now we lazily
-    import LangGraph (to validate the extra is installed) and raise.
+    Phase 1.5 default: a local SQLite-backed saver at
+    ``${AGI_LANGGRAPH_CHECKPOINT_DB:-./.agi-cache/langgraph.sqlite3}`` when the
+    optional ``langgraph-checkpoint-sqlite`` package is importable, otherwise
+    an in-memory saver (``langgraph.checkpoint.memory.MemorySaver``) which is
+    guaranteed-available with the base ``[langgraph]`` extra.
+
+    Phase 3 will read ``operator_config.use_case['checkpointer']`` to pick
+    Mongo / Postgres / SQLite explicitly; until then the default is sufficient
+    for dev and single-pod use. ``operator_config`` is accepted for forward
+    compatibility but currently unused.
     """
     _require_langgraph()
-    raise NotImplementedError(
-        "TODO: pick a CheckpointSaver from operator config (sqlite/postgres/mongo) in Phase 3."
-    )
+    try:
+        from langgraph.checkpoint.sqlite import SqliteSaver  # type: ignore[import-not-found]
+    except ImportError:
+        from langgraph.checkpoint.memory import MemorySaver  # type: ignore[import-not-found]
+
+        return MemorySaver()
+
+    db_path = Path(os.environ.get("AGI_LANGGRAPH_CHECKPOINT_DB", "./.agi-cache/langgraph.sqlite3"))
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return SqliteSaver.from_conn_string(str(db_path))
 
 
 def compile_graph(graph: Any, *, pack: Pack, operator_config: Any = None) -> Any:

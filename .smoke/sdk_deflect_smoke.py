@@ -36,6 +36,7 @@ Run from repo root:
     OLLAMA_API_BASE=http://localhost:11434 \\
     uv run python .smoke/sdk_deflect_smoke.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -173,9 +174,11 @@ SYSTEM_PROMPT = (
     "Tool use protocol (FOLLOW EXACTLY):\n"
     "  Turn 1: Call search_knowledge_base ONE time with the user's question as the query.\n"
     "  Turn 2: You will receive the article in a tool message. Do NOT call the tool again. "
-    "Read the article and write your reply directly. Your reply must be plain text, no tool calls.\n\n"
+    "Read the article and write your reply directly. Your reply must be plain text, "
+    "no tool calls.\n\n"
     "Reply rules: cite BlueMarble by name, use the article's exact steps, keep under 80 words, "
-    "never invent ticket numbers, never mention a specialist when the KB already answers the question."
+    "never invent ticket numbers, never mention a specialist when the KB already answers "
+    "the question."
 )
 
 
@@ -184,14 +187,18 @@ TOOLS_OPENAI_SCHEMA: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "search_knowledge_base",
-            "description": "Search the BlueMarble Knowledge Base for an article matching the user's question.",
+            "description": (
+                "Search the BlueMarble Knowledge Base for an article matching the user's question."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "The user's question, verbatim."},
                     "category": {
                         "type": "string",
-                        "description": "Optional filter: device, plan, billing, roaming, voicemail.",
+                        "description": (
+                            "Optional filter: device, plan, billing, roaming, voicemail."
+                        ),
                     },
                 },
                 "required": ["query"],
