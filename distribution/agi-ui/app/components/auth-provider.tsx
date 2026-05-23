@@ -2,114 +2,131 @@
 'use client';
 
 /**
- * AuthProvider — minimal session context (FR-AUTH-01..04).
+ * AuthProvider — thin compatibility wrapper over next-auth/react v5.
  *
- * Real implementation will use Auth.js (NextAuth) v5 with the OIDC issuer
- * from NEXT_PUBLIC_AGI_OIDC_ISSUER. For v1 of the console, we expose the
- * same React surface so screens can be built and tested while the OIDC
- * adapter lands:
- *   - <AuthProvider> reads the session from /api/auth/session (httpOnly
- *     cookie path) on mount. In dev-noop mode the runtime returns a static
- *     admin identity; in static-token mode it returns the token's claims.
- *   - useSession() returns { user, status }.
- *   - useScopes() returns the cached scope list (drives sidebar filtering).
+ * Why a wrapper instead of just re-exporting `SessionProvider`:
+ *  - Existing consumers (sidebar.tsx, app-shell.tsx, pack-switcher.tsx,
+ *    pack-switcher.test.tsx) destructure { user, status, signOut, refresh }
+ *    from `useSession()`. next-auth/react's `useSession()` returns
+ *    { data, status, update }. We adapt the shape here so we don't have to
+ *    touch every consumer or test.
+ *  - The pack-switcher unit test feeds in `initialUser` (a SessionUser with
+ *    scopes) directly, with no IdP wired up. We synthesise a Session shape
+ *    from it for the SessionProvider's `session` prop.
  *
- * No access token ever lives in JS — bearer auth is added by a same-origin
- * proxy (/api/runtime/*) reading the httpOnly cookie. See runtime-fetch.ts.
+ * Exports kept stable for downstream agents (4a-C BFF, 4a-D screens):
+ *   AuthProvider, SessionProvider, useSession, useScopes, signIn, signOut.
  */
 
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+  SessionProvider as NextAuthSessionProvider,
+  signOut as nextAuthSignOut,
+  signIn as nextAuthSignIn,
+  useSession as useNextAuthSession,
+} from 'next-auth/react';
+import { useCallback, useMemo, type ReactNode } from 'react';
+import type { Session } from 'next-auth';
 import type { SessionUser } from '@/lib/api/types';
+import type { AuthScope } from '@/app/lib/auth-types';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
 
-interface AuthState {
+interface LegacySessionShape {
   user: SessionUser | null;
   status: Status;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthState | null>(null);
+/**
+ * Project the legacy SessionUser test fixture (subject/email/scopes) into a
+ * next-auth Session so that <SessionProvider session={…}> stays happy.
+ */
+function legacyUserToSession(user: SessionUser | null | undefined): Session | null {
+  if (!user) return null;
+  return {
+    user: {
+      id: user.subject,
+      name: user.name ?? null,
+      email: user.email ?? null,
+      image: null,
+      scopes: user.scopes as AuthScope[],
+      tenantId: 'default',
+    },
+    accessToken: '',
+    // 24h synthetic expiry — irrelevant for tests; SessionProvider's
+    // refetch interval is disabled below.
+    expires: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+  };
+}
 
 interface AuthProviderProps {
   children: ReactNode;
-  /** Server-rendered initial session so first paint is correct. */
+  /** Server-rendered initial session, prefetched in the root layout. */
+  session?: Session | null;
+  /** Legacy: SessionUser-shaped initial state (kept for unit tests). */
   initialUser?: SessionUser | null;
 }
 
-export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
-  const [user, setUser] = useState<SessionUser | null>(initialUser);
-  const [status, setStatus] = useState<Status>(
-    initialUser ? 'authenticated' : 'loading',
+/**
+ * Drop-in for the old AuthProvider. Either pass `session` (the v5-idiomatic
+ * way) OR `initialUser` (the v0 shim's prop name, kept for the unit test).
+ */
+export function AuthProvider({ children, session, initialUser }: AuthProviderProps) {
+  const resolved = session ?? legacyUserToSession(initialUser ?? null);
+  return (
+    <NextAuthSessionProvider session={resolved} refetchInterval={0} refetchOnWindowFocus={false}>
+      {children}
+    </NextAuthSessionProvider>
   );
+}
+
+/** Direct re-export so callers who already speak v5 can use it verbatim. */
+export const SessionProvider = NextAuthSessionProvider;
+
+/**
+ * useSession — legacy-shape adapter over next-auth/react's `useSession`.
+ *
+ * Returns { user, status, refresh, signOut } so the existing call sites in
+ * sidebar.tsx / app-shell.tsx / pack-switcher.tsx don't have to change.
+ */
+export function useSession(): LegacySessionShape {
+  const { data, status, update } = useNextAuthSession();
+
+  const user: SessionUser | null = useMemo(() => {
+    if (!data?.user) return null;
+    return {
+      subject: data.user.id,
+      email: data.user.email ?? undefined,
+      name: data.user.name ?? undefined,
+      scopes: data.user.scopes ?? [],
+    };
+  }, [data]);
 
   const refresh = useCallback(async () => {
-    setStatus('loading');
-    try {
-      const res = await fetch('/api/auth/session', {
-        credentials: 'include',
-        cache: 'no-store',
-      });
-      if (!res.ok) {
-        setUser(null);
-        setStatus('unauthenticated');
-        return;
-      }
-      const body = (await res.json()) as { user: SessionUser | null };
-      setUser(body.user);
-      setStatus(body.user ? 'authenticated' : 'unauthenticated');
-    } catch {
-      setUser(null);
-      setStatus('unauthenticated');
-    }
+    await update();
+  }, [update]);
+
+  const doSignOut = useCallback(async () => {
+    await nextAuthSignOut({ callbackUrl: '/sign-in' });
   }, []);
 
-  const signOut = useCallback(async () => {
-    try {
-      await fetch('/api/auth/signout', { method: 'POST', credentials: 'include' });
-    } finally {
-      setUser(null);
-      setStatus('unauthenticated');
-      if (typeof window !== 'undefined') window.location.href = '/sign-in';
-    }
-  }, []);
-
-  useEffect(() => {
-    if (initialUser) return;
-    void refresh();
-  }, [initialUser, refresh]);
-
-  const value = useMemo<AuthState>(
-    () => ({ user, status, refresh, signOut }),
-    [user, status, refresh, signOut],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return {
+    user,
+    status: status as Status,
+    refresh,
+    signOut: doSignOut,
+  };
 }
 
-export function useSession(): AuthState {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    // Fail open in tests / Storybook — return an unauthenticated shape.
-    return {
-      user: null,
-      status: 'unauthenticated',
-      refresh: async () => {},
-      signOut: async () => {},
-    };
-  }
-  return ctx;
-}
-
+/**
+ * useScopes — returns the active session's scopes (or [] when signed out).
+ * Drives sidebar role filtering (FR-IA-01).
+ */
 export function useScopes(): string[] {
-  return useSession().user?.scopes ?? [];
+  const { data } = useNextAuthSession();
+  return data?.user?.scopes ?? [];
 }
+
+/** Re-export for screens that want to fire sign-in/out without indirection. */
+export { nextAuthSignIn as signIn, nextAuthSignOut as signOut };

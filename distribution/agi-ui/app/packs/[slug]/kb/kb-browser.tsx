@@ -155,7 +155,7 @@ export function KbBrowser({ slug, initialArticles }: Props) {
         </div>
         {canWrite && (
           <div className="flex flex-wrap gap-2">
-            <Button onClick={reindex} disabled={reindexing} variant="secondary">
+            <Button onClick={reindex} disabled={reindexing} variant="tonal">
               {reindexing
                 ? reindexProgress != null
                   ? `Reindexing… ${reindexProgress}%`

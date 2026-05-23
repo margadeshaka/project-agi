@@ -236,7 +236,7 @@ export function TestInvokePanel({ tool }: Props) {
           )}
 
           <div className="flex items-center gap-2">
-            <Button type="submit" variant={dryRun || !sideEffecting ? 'primary' : 'danger'} disabled={submitting}>
+            <Button type="submit" variant={dryRun || !sideEffecting ? 'filled' : 'danger'} disabled={submitting}>
               {submitting ? 'Invoking…' : dryRun ? 'Dry-run invoke' : 'Invoke'}
             </Button>
           </div>
@@ -273,7 +273,7 @@ export function TestInvokePanel({ tool }: Props) {
         title="Confirm side-effecting invoke"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
+            <Button variant="text" onClick={() => setConfirmOpen(false)}>
               Cancel
             </Button>
             <Button variant="danger" onClick={() => void submitForReal()}>

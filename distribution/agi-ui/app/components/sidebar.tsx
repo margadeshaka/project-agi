@@ -6,13 +6,30 @@
  *
  * Per Material Design 3 spec: each item is a 44px full-pill row with a
  * state-layer background that lifts to `--md-secondary-container` when
- * active. The leading icon is purely affordance; the label carries semantic
- * weight.
+ * active. The leading icon is purely affordance; the label carries
+ * semantic weight.
  *
  * Role-aware filtering (FR-IA-01) — items the user lacks scope for are
- * HIDDEN, not greyed. Server-side enforcement still happens at the runtime;
- * UI hiding is for clean affordance, never the security boundary
- * (FR-AUTH-02).
+ * HIDDEN, not greyed (ADMIN_CONSOLE §5). Server-side enforcement still
+ * happens at the runtime; UI hiding is for clean affordance, never the
+ * security boundary (FR-AUTH-02).
+ *
+ * Scope rules — see ADMIN_CONSOLE §5 RBAC matrix:
+ *
+ *   Item       | Visible to scopes (any one matches)
+ *   -----------+------------------------------------------------------
+ *   Health     | every signed-in user
+ *   Packs      | agi:admin | agi:viewer | agi:operator:<any-slug>
+ *   Tools      | agi:admin | agi:viewer
+ *   Use cases  | agi:admin | agi:viewer | agi:dev | agi:operator:<any>
+ *   Audit      | agi:admin | agi:viewer
+ *   LLM        | agi:admin | agi:viewer
+ *   Admin      | agi:admin only (sub-routes: Log, Users, Settings)
+ *
+ * The operator role intentionally has access to Packs + Use cases for
+ * its own slug; the runtime authorises the per-pack data anyway, so a
+ * stray click hits a 403 we render via ForbiddenState rather than
+ * leaking content.
  */
 
 import Link from 'next/link';
@@ -23,36 +40,56 @@ import { cn } from '@/lib/utils';
 interface NavItem {
   href: string;
   label: string;
-  /** Leading icon glyph (emoji or single-character SVG-less placeholder). */
+  /** Leading icon glyph (single character — emoji- or geometric-style). */
   icon?: string;
-  /** scopes required (any one matches). Empty = visible to all signed-in users. */
+  /** Scopes required (any one matches). Empty/undefined = visible to all signed-in users. */
   scopes?: string[];
-  /** Optional regex match for operator-scoped slugs (matches any agi:operator:*). */
-  needsOperator?: boolean;
+  /** When set, any `agi:operator:<slug>` scope also grants visibility. */
+  allowOperator?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { href: '/', label: 'Health', icon: '◉', scopes: ['agi:admin', 'agi:dev', 'agi:viewer'] },
-  { href: '/packs', label: 'Packs', icon: '▦', scopes: ['agi:admin'], needsOperator: true },
-  { href: '/tools', label: 'Tools', icon: '◇', scopes: ['agi:dev', 'agi:admin'] },
-  { href: '/use-cases', label: 'Use cases', icon: '◍', scopes: ['agi:admin'] },
-  { href: '/audit', label: 'Audit', icon: '≣', scopes: ['agi:viewer', 'agi:dev', 'agi:admin'] },
-  { href: '/llm', label: 'LLM', icon: '◐', scopes: ['agi:admin'] },
+  { href: '/', label: 'Health', icon: '◉' /* visible to all signed-in users */ },
+  {
+    href: '/packs',
+    label: 'Packs',
+    icon: '▦',
+    scopes: ['agi:admin', 'agi:viewer'],
+    allowOperator: true,
+  },
+  { href: '/tools', label: 'Tools', icon: '◇', scopes: ['agi:admin', 'agi:viewer'] },
+  {
+    href: '/use-cases',
+    label: 'Use cases',
+    icon: '◍',
+    scopes: ['agi:admin', 'agi:viewer', 'agi:dev'],
+    allowOperator: true,
+  },
+  { href: '/audit', label: 'Audit', icon: '≣', scopes: ['agi:admin', 'agi:viewer'] },
+  { href: '/llm', label: 'LLM', icon: '◐', scopes: ['agi:admin', 'agi:viewer'] },
 ];
 
 const ADMIN_SUB: NavItem[] = [
-  { href: '/admin/users', label: 'Users', icon: '◯', scopes: ['agi:admin'] },
   { href: '/admin/log', label: 'Log', icon: '☰', scopes: ['agi:admin'] },
+  { href: '/admin/users', label: 'Users', icon: '◯', scopes: ['agi:admin'] },
   { href: '/admin/settings', label: 'Settings', icon: '⚙', scopes: ['agi:admin'] },
 ];
 
-function visible(item: NavItem, scopes: string[]): boolean {
-  if (!item.scopes || item.scopes.length === 0) return true;
-  if (item.scopes.some((s) => scopes.includes(s))) return true;
-  if (item.needsOperator && scopes.some((s) => s.startsWith('agi:operator:'))) {
-    return true;
+/** Returns true if the user's scope set should see this nav item. */
+export function isVisible(item: NavItem, scopes: readonly string[]): boolean {
+  if (!item.scopes || item.scopes.length === 0) {
+    // Items without an explicit scope list are visible to every signed-in user.
+    if (!item.allowOperator) return true;
   }
+  if (item.scopes?.some((s) => scopes.includes(s))) return true;
+  if (item.allowOperator && scopes.some((s) => s.startsWith('agi:operator:'))) return true;
   return false;
+}
+
+/** Active when the current path matches the item exactly, or is a sub-route. */
+function isActiveFor(href: string, pathname: string): boolean {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function Sidebar() {
@@ -61,15 +98,16 @@ export function Sidebar() {
   const showAdmin = scopes.includes('agi:admin');
 
   const renderItem = (item: NavItem) => {
-    const isActive = pathname === item.href;
+    const active = isActiveFor(item.href, pathname);
     return (
       <Link
         key={item.href}
         href={item.href}
-        aria-current={isActive ? 'page' : undefined}
+        aria-current={active ? 'page' : undefined}
+        data-testid={`nav-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
         className={cn(
           'group flex h-11 items-center gap-3 rounded-full px-4 text-[13.5px] font-medium tracking-wide transition-colors',
-          isActive
+          active
             ? 'bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]'
             : 'text-[var(--md-on-surface-variant)] hover:bg-[var(--md-on-surface)]/8 hover:text-[var(--md-on-surface)]',
         )}
@@ -83,6 +121,9 @@ export function Sidebar() {
       </Link>
     );
   };
+
+  const visibleTop = NAV.filter((n) => isVisible(n, scopes));
+  const visibleAdmin = showAdmin ? ADMIN_SUB.filter((n) => isVisible(n, scopes)) : [];
 
   return (
     <nav
@@ -116,9 +157,9 @@ export function Sidebar() {
         </span>
       </div>
 
-      {NAV.filter((n) => visible(n, scopes)).map(renderItem)}
+      {visibleTop.map(renderItem)}
 
-      {showAdmin && (
+      {showAdmin && visibleAdmin.length > 0 && (
         <>
           <div
             className="mb-1.5 mt-5 px-4 text-[11px] font-medium tracking-wide"
@@ -126,7 +167,7 @@ export function Sidebar() {
           >
             Admin
           </div>
-          {ADMIN_SUB.filter((n) => visible(n, scopes)).map(renderItem)}
+          {visibleAdmin.map(renderItem)}
         </>
       )}
     </nav>
