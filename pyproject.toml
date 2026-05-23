@@ -1,6 +1,6 @@
 [project]
 name = "project-agi"
-version = "0.1.0-dev"
+version = "1.0.0rc1"
 description = "Open-source, self-hosted, configuration-driven Agent Intelligence stack"
 readme = "README.md"
 license = { text = "Apache-2.0" }

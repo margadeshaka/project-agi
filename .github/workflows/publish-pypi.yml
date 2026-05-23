@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# publish-pypi — build sdist + wheel for the three Band-1 publishable packages
+# and upload to PyPI (or TestPyPI) using *trusted publishing* (OIDC). No API
+# tokens are stored in repo secrets.
+#
+# Publishable packages (Band-1, the library):
+#   * packages/agi-sdk       → PyPI project: agi-sdk
+#   * packages/agi-core      → PyPI project: agi-core
+#   * packages/agi-mcpfyer   → PyPI project: agi-mcpfyer
+#
+# Band-2 distribution (agi-runtime, agi-auth, agi-ui, agi-chart) is NOT
+# published here — runtime + ui images go to GHCR via `publish-images.yml`,
+# and the Helm chart will be published to `oci://ghcr.io/<org>/agi` separately.
+# agi-packs is reference content (no wheel).
+#
+# ---------------------------------------------------------------------------
+# ONE-TIME PYPI SETUP (per package, done by a maintainer, NOT this workflow)
+# ---------------------------------------------------------------------------
+# For each PyPI project (agi-sdk, agi-core, agi-mcpfyer), and again for
+# TestPyPI if you want to dry-run there, visit:
+#
+#     https://pypi.org/manage/account/publishing/
+#     (or https://test.pypi.org/manage/account/publishing/ for TestPyPI)
+#
+# Add a "Trusted Publisher" with these fields:
+#
+#     PyPI Project Name:    agi-sdk            (or agi-core / agi-mcpfyer)
+#     Owner:                comviva-oss        (GitHub org/user that owns the repo)
+#     Repository name:      project-agi
+#     Workflow filename:    publish-pypi.yml
+#     Environment name:     (leave blank — we don't gate on a GH environment yet)
+#
+# Once the trusted publisher is registered, this workflow can mint short-lived
+# upload tokens via OIDC; no PYPI_API_TOKEN secret is needed.
+#
+# ---------------------------------------------------------------------------
+# TRIGGERS
+# ---------------------------------------------------------------------------
+# * Pushing a tag like `v1.0.0-rc1` publishes ALL THREE packages to PyPI.
+# * `workflow_dispatch` lets a maintainer publish a single package to TestPyPI
+#   (default) or PyPI for verification. The default repository is TestPyPI so
+#   an accidental click can't burn a real release.
+
+name: publish-pypi
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Which package to publish"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - agi-sdk
+          - agi-core
+          - agi-mcpfyer
+      repository:
+        description: "Target index (TestPyPI is the safe default)"
+        required: true
+        default: "testpypi"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+
+permissions:
+  id-token: write   # trusted publishing OIDC — minted per job, short-lived
+  contents: read
+
+jobs:
+  build-and-publish:
+    name: ${{ matrix.package }} → ${{ github.event_name == 'workflow_dispatch' && inputs.repository || 'pypi' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Skip packages the maintainer didn't pick when dispatching by hand.
+    if: |
+      github.event_name != 'workflow_dispatch' ||
+      inputs.package == 'all' ||
+      inputs.package == matrix.package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: agi-sdk
+            path: packages/agi-sdk
+          - package: agi-core
+            path: packages/agi-core
+          - package: agi-mcpfyer
+            path: packages/agi-mcpfyer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build hatchling
+
+      - name: Build sdist + wheel
+        working-directory: ${{ matrix.path }}
+        run: |
+          python -m build --sdist --wheel --outdir dist
+          ls -lh dist/
+
+      # Upload artefacts BEFORE publish so a failed upload is still inspectable.
+      - name: Upload built artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-dist
+          path: ${{ matrix.path }}/dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish to TestPyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.repository == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ matrix.path }}/dist
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          print-hash: true
+
+      - name: Publish to PyPI
+        # Tag pushes always go to real PyPI. Dispatch goes to PyPI only when
+        # the maintainer explicitly chose it.
+        if: |
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.repository == 'pypi')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ matrix.path }}/dist
+          skip-existing: true
+          print-hash: true
+
+      - name: Summarise
+        run: |
+          echo "Package:   ${{ matrix.package }}"
+          echo "Path:      ${{ matrix.path }}"
+          echo "Trigger:   ${{ github.event_name }}"
+          echo "Target:    ${{ github.event_name == 'workflow_dispatch' && inputs.repository || 'pypi' }}"
+          echo "Artefacts:"
+          ls -lh ${{ matrix.path }}/dist/ | sed 's/^/  /'

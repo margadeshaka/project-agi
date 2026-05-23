@@ -1,6 +1,6 @@
 {
   "name": "agi-ui",
-  "version": "0.3.0-dev",
+  "version": "1.0.0-rc1",
   "private": true,
   "description": "project-agi reference Admin Console (Next.js 14)",
   "license": "Apache-2.0",

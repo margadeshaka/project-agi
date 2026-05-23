@@ -29,7 +29,7 @@ on:
         required: true
 
 env:
-  RUNTIME_IMAGE: "ghcr.io/comviva-oss/agi-runtime:0.5.0-dev"
+  RUNTIME_IMAGE: "ghcr.io/comviva-oss/agi-runtime:1.0.0-rc1"
   GHCR_ORG: "comviva-oss"
 
 jobs:

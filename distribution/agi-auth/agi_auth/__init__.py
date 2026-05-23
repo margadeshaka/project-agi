@@ -21,7 +21,7 @@ __all__ = [
     "resolve_adapter",
 ]
 
-__version__ = "0.3.0-dev"
+__version__ = "1.0.0rc1"
 
 
 def resolve_adapter() -> AuthAdapter:

@@ -24,7 +24,7 @@ import os
 import threading
 from typing import Any
 
-__version__ = "0.1.0-dev"
+__version__ = "1.0.0rc1"
 
 _DISABLE_ENV = "AGI_DISABLE_TRACELOOP"
 _boot_lock = threading.Lock()

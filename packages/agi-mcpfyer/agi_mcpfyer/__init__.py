@@ -19,7 +19,7 @@ from agi_mcpfyer.generator import (
     generate_tools,
 )
 
-__version__ = "0.2.0-dev"
+__version__ = "1.0.0rc1"
 
 __all__ = [
     "MCPBundle",

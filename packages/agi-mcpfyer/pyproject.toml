@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agi-mcpfyer"
-version = "0.2.0-dev"
+version = "1.0.0rc1"
 description = "OpenAPI 3 → MCP tool bundle generator. Build-time, first-class — ships a runnable MCP server from any OpenAPI spec."
 readme = "README.md"
 license = { text = "Apache-2.0" }

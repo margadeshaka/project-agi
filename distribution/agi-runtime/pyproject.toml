@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agi-runtime"
-version = "0.3.0-dev"
+version = "1.0.0rc1"
 description = "project-agi reference FastAPI runtime — X-Pack dispatch, MCP server, /chat /tools /kb /trail /admin routes"
 readme = "README.md"
 license = { text = "Apache-2.0" }

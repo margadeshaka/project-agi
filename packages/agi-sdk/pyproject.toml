@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agi-sdk"
-version = "0.1.0-dev"
+version = "1.0.0rc1"
 description = "project-agi Python SDK — primitives for building agentic use-cases against configurable packs"
 readme = "README.md"
 license = { text = "Apache-2.0" }
