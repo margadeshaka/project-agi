@@ -24,7 +24,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // eslint-disable-next-line import/first
-import { isStale, pingLangfuse } from '../page';
+import { isStale, pingLangfuse } from '../lib/health-helpers';
 
 const ORIG_FETCH = globalThis.fetch;
 

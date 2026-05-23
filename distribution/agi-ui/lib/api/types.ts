@@ -102,6 +102,16 @@ export interface JsonSchema {
   minLength?: number;
   maxLength?: number;
   pattern?: string;
+  /** OpenAPI 3.1 / JSON-Schema 2020-12 variant union. */
+  oneOf?: JsonSchema[];
+  anyOf?: JsonSchema[];
+  /** OpenAPI 3.x discriminator object — `{ propertyName, mapping? }`. */
+  discriminator?: {
+    propertyName: string;
+    mapping?: Record<string, string>;
+  };
+  /** Const used for variant tagging in `oneOf` branches. */
+  const?: unknown;
   [key: string]: unknown;
 }
 

@@ -7,11 +7,21 @@
  * The reference screen for the M3 design system: 4 KPIs, a service-status
  * card with status dots, and a packs/links split. All chrome lives in the
  * shared globals.css; this file just composes the layout.
+ *
+ * Two pure helpers — `isStale` and `pingLangfuse` — are exported alongside
+ * the component so the unit-test suite can exercise them without rendering
+ * a server component (FR-IA-02). The product wiring (replacing the mock
+ * DATA roll-up with real `/admin/packs/{slug}` + Langfuse probes) lands in
+ * the P4c follow-up; the contracts these helpers expose are stable in the
+ * meantime.
  */
 
 import Link from 'next/link';
 import { Card, Icon, Pill, ScreenHead, StatusDot } from './components/m3';
 import { DATA } from './mock/data';
+
+// Pure helpers (isStale, pingLangfuse) live in `app/lib/health-helpers.ts`
+// because Next.js rejects arbitrary named exports on page modules.
 
 export default function HealthScreen() {
   const d = DATA;

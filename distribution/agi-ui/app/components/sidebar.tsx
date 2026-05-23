@@ -21,7 +21,7 @@ interface NavItem {
   icon: string;
   badge?: number;
   scopes?: string[];
-  needsOperator?: boolean;
+  allowOperator?: boolean;
 }
 
 const PLATFORM: NavItem[] = [
@@ -33,7 +33,7 @@ const PLATFORM: NavItem[] = [
     icon: 'pack',
     badge: 4,
     scopes: ['agi:admin'],
-    needsOperator: true,
+    allowOperator: true,
   },
   { href: '/tools', label: 'Tools', icon: 'tool', badge: 15, scopes: ['agi:admin', 'agi:dev'] },
   { href: '/use-cases', label: 'Use cases', icon: 'usecase', scopes: ['agi:admin'] },
@@ -48,10 +48,20 @@ const ADMIN: NavItem[] = [
   { href: '/admin/settings', label: 'Settings', icon: 'settings', scopes: ['agi:admin'] },
 ];
 
-function visibleFor(item: NavItem, scopes: string[]): boolean {
+/**
+ * Pure predicate exported for the unit-test suite. Mirrors ADMIN_CONSOLE §5:
+ *   - no `scopes` declared → visible to everyone signed in
+ *   - any declared scope matches a caller scope → visible
+ *   - `allowOperator: true` + caller has any `agi:operator:<slug>` → visible
+ *   - otherwise hidden (not greyed).
+ */
+export function isVisible(
+  item: { scopes?: string[]; allowOperator?: boolean },
+  scopes: string[],
+): boolean {
   if (!item.scopes) return true;
   if (item.scopes.some((s) => scopes.includes(s))) return true;
-  if (item.needsOperator && scopes.some((s) => s.startsWith('agi:operator:'))) return true;
+  if (item.allowOperator && scopes.some((s) => s.startsWith('agi:operator:'))) return true;
   return false;
 }
 
@@ -91,13 +101,13 @@ export function Sidebar() {
       </div>
       <nav className="rail-nav" aria-label="Primary">
         <div className="rail-env">Platform</div>
-        {PLATFORM.filter((n) => visibleFor(n, scopes)).map(renderItem)}
+        {PLATFORM.filter((n) => isVisible(n, scopes)).map(renderItem)}
         {showAdmin && (
           <>
             <div className="rail-env" style={{ marginTop: 14 }}>
               Admin
             </div>
-            {ADMIN.filter((n) => visibleFor(n, scopes)).map(renderItem)}
+            {ADMIN.filter((n) => isVisible(n, scopes)).map(renderItem)}
           </>
         )}
       </nav>
