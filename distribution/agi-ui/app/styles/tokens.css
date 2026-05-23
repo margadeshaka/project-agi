@@ -5,22 +5,6 @@
  * Ported from the Claude Design handoff bundle (2026-05-22). Hex literals
  * are ONLY allowed here and in globals.css; the build-time linter
  * (scripts/check-no-hex.ts) enforces this everywhere else.
- *
- * Token contract
- * --------------
- *   --md-primary / --md-on-primary             — high-emphasis actions
- *   --md-secondary / --md-secondary-container  — buttons, filter chips, nav state
- *   --md-tertiary / --md-tertiary-container    — accents, avatars
- *   --md-surface / --md-surface-container-*    — elevation by tonal lift,
- *                                                NOT shadows or borders
- *   --md-on-surface / --md-on-surface-variant  — text on neutral surfaces
- *   --md-outline / --md-outline-variant        — hairlines, focus rings
- *   --md-success / --md-warning / --md-error   — semantic status
- *   --md-shape-{xs,sm,md,lg,xl,full}           — corner radii
- *   --md-elev-{1,2,3}                          — drop-shadow scale
- *
- * Theme switching: <html data-theme="dark"> (default) or "light".
- * Density switching: <html data-density="compact|regular|comfy">.
  */
 
 :root,
@@ -117,12 +101,18 @@
   --md-shape-xl: 28px;
   --md-shape-full: 999px;
 
+  --font-display: 'Google Sans', 'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    system-ui, sans-serif;
   --font-ui: 'Roboto Flex', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
     sans-serif;
   --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --row-pad-y: 12px;
   --row-pad-x: 16px;
+
+  --md-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-ease-decel: cubic-bezier(0, 0, 0, 1);
 }
 
 [data-density='compact'] {
@@ -134,12 +124,10 @@
   --row-pad-x: 20px;
 }
 
-/* ---------------------------------------------------------------- */
-/*  Backwards-compat aliases — old --agi-* tokens map onto M3.       */
-/*  Existing components that read these keep working untouched.      */
-/* ---------------------------------------------------------------- */
+/* Backwards-compat aliases — old --agi-* tokens map onto M3. */
 :root,
-[data-theme='dark'] {
+[data-theme='dark'],
+[data-theme='light'] {
   --agi-bg: var(--md-surface);
   --agi-fg: var(--md-on-surface);
   --agi-muted: var(--md-on-surface-variant);

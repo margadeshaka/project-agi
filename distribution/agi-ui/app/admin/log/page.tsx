@@ -1,76 +1,84 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * /admin/log — admin action audit log (FR-ADM-01).
- */
+'use client';
 
-import { runtimeFetch, RuntimeError } from '../../components/runtime-fetch';
-import type { AdminLogEntry } from '@/lib/api/types';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../../components/ui/table';
-import { Badge } from '../../components/ui/badge';
-import { EmptyState, ErrorState, ForbiddenState } from '../../components/ui/empty-state';
+import { Icon, Pill, ScreenHead, SearchInput } from '../../components/m3';
+import { DATA } from '../../mock/data';
 
-async function loadLog(): Promise<{ items: AdminLogEntry[] | null; error: RuntimeError | null }> {
-  try {
-    const items = await runtimeFetch<AdminLogEntry[]>('/admin/log');
-    return { items, error: null };
-  } catch (err) {
-    if (err instanceof RuntimeError) return { items: null, error: err };
-    throw err;
-  }
-}
-
-export default async function LogPage() {
-  const { items, error } = await loadLog();
-  if (error?.status === 403) return <ForbiddenState />;
-  if (error) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Admin log</h1>
-        <ErrorState problem={error.problem} />
-      </section>
-    );
-  }
-  if (!items || items.length === 0) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Admin log</h1>
-        <EmptyState
-          title="No write actions yet"
-          description="Pack reloads, KB uploads, and reindexes will appear here."
-        />
-      </section>
-    );
-  }
+export default function AdminLogScreen() {
+  const d = DATA;
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Admin log</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Time</TableHead>
-            <TableHead>Actor</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>Result</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((entry, idx) => (
-            <TableRow key={`${entry.timestamp_iso}-${idx}`}>
-              <TableCell className="font-mono text-xs">{entry.timestamp_iso}</TableCell>
-              <TableCell className="text-xs">{entry.actor}</TableCell>
-              <TableCell className="font-mono text-xs">
-                {entry.method} {entry.path}
-              </TableCell>
-              <TableCell>
-                <Badge tone={entry.ok ? 'success' : 'danger'}>
-                  {entry.status} {entry.ok ? 'ok' : 'err'}
-                </Badge>
-                {entry.detail && <span className="ml-2 text-xs text-muted">{entry.detail}</span>}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </section>
+    <div className="stack">
+      <ScreenHead
+        title="Admin action log"
+        lede="Every write action initiated through the console is itself written here within 1 second. Append-only at the runtime layer."
+        meta={`${d.adminLog.length} entries shown · 99p latency 320ms`}
+        right={
+          <button type="button" className="btn">
+            <Icon name="download" /> Export CSV
+          </button>
+        }
+      />
+      <div className="tbl-wrap">
+        <div className="filterbar">
+          <SearchInput value="" onChange={() => {}} placeholder="Search actor or target" width={280} />
+          <select className="select">
+            <option>Method: any</option>
+            <option>POST</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+          </select>
+          <select className="select">
+            <option>Result: any</option>
+            <option>2xx</option>
+            <option>4xx</option>
+            <option>5xx</option>
+          </select>
+          <select className="select">
+            <option>Range: last 24h</option>
+            <option>last 7 days</option>
+            <option>last 30 days</option>
+          </select>
+          <div className="results">{d.adminLog.length} entries</div>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Actor</th>
+              <th>Method</th>
+              <th>Target</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.adminLog.map((l, i) => (
+              <tr key={i}>
+                <td className="mono">2026-05-22 {l.ts}</td>
+                <td className="mono">{l.actor}</td>
+                <td>
+                  <Pill
+                    kind={
+                      l.action === 'DELETE' ? 'bad' : l.action === 'PATCH' ? 'warn' : 'accent'
+                    }
+                  >
+                    {l.action}
+                  </Pill>
+                </td>
+                <td className="mono">{l.target}</td>
+                <td>
+                  {l.result.startsWith('2') ? (
+                    <Pill kind="good">{l.result}</Pill>
+                  ) : l.result.startsWith('5') ? (
+                    <Pill kind="bad">{l.result}</Pill>
+                  ) : (
+                    <Pill kind="warn">{l.result}</Pill>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

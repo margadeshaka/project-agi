@@ -1,86 +1,37 @@
 // SPDX-License-Identifier: Apache-2.0
 'use client';
 
-/**
- * AppShell — M3 navigation drawer + top app bar composition.
- *
- * Layout grid:
- *
- *   ┌─────────┬─────────────────────────────────────────────┐
- *   │  rail   │  topbar     (64px)                          │
- *   │ (256px) ├─────────────────────────────────────────────┤
- *   │         │  main       (scrolls)                       │
- *   │         │                                             │
- *   └─────────┴─────────────────────────────────────────────┘
- *
- * The rail uses `--md-surface-container-low`, the topbar + main both use
- * the plain `--md-surface`. No hairline borders between regions; tonal
- * lift does the separation (ADMIN_CONSOLE §6 / NFR-THM-01).
- */
-
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
-import { PackSwitcher } from './pack-switcher';
-import { ToastProvider } from './ui/toast';
-import { useSession } from './auth-provider';
+import { Topbar } from './topbar';
+import { SnackbarProvider } from './m3';
 
-interface AppShellProps {
-  children: ReactNode;
-  packs: { slug: string; display_name: string }[];
-}
+/**
+ * AppShell — M3 navigation drawer + small top app bar.
+ *
+ * The 272px rail and 64px topbar are pinned; only `.main` scrolls. Tonal lift
+ * is the only separator — no hairline borders between regions
+ * (ADMIN_CONSOLE §6 / NFR-THM-01).
+ *
+ * Routes that take over the viewport (e.g. /sign-in) render without the
+ * shell.
+ */
+export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? '/';
+  const isFullBleed = pathname.startsWith('/sign-in') || pathname === '/sign-in';
 
-export function AppShell({ children, packs }: AppShellProps) {
-  const { user, status, signOut } = useSession();
+  if (isFullBleed) {
+    return <SnackbarProvider>{children}</SnackbarProvider>;
+  }
 
   return (
-    <ToastProvider>
-      <div
-        className="grid h-screen overflow-hidden"
-        style={{
-          gridTemplateColumns: '256px 1fr',
-          gridTemplateRows: '64px 1fr',
-          gridTemplateAreas: '"rail topbar" "rail main"',
-          background: 'var(--md-surface)',
-        }}
-      >
-        <div style={{ gridArea: 'rail' }}>
-          <Sidebar />
-        </div>
-
-        <header
-          role="toolbar"
-          aria-label="Account and pack"
-          className="flex items-center gap-4 px-6"
-          style={{ gridArea: 'topbar', background: 'var(--md-surface)' }}
-        >
-          <div className="flex flex-1 items-center gap-3">
-            <PackSwitcher available={packs} />
-          </div>
-          <span className="text-[12.5px]" style={{ color: 'var(--md-on-surface-variant)' }}>
-            {status === 'authenticated' ? (user?.email ?? user?.subject ?? 'user') : 'signed out'}
-          </span>
-          {status === 'authenticated' && (
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[var(--md-on-surface)]/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-primary)]"
-              style={{ color: 'var(--md-on-surface-variant)' }}
-              aria-label="Sign out"
-              title="Sign out"
-            >
-              ⏻
-            </button>
-          )}
-        </header>
-
-        <main
-          id="main"
-          className="overflow-y-auto px-6 pb-16 pt-2"
-          style={{ gridArea: 'main', background: 'var(--md-surface)' }}
-        >
-          {children}
-        </main>
+    <SnackbarProvider>
+      <div className="app">
+        <Sidebar />
+        <Topbar />
+        <main className="main">{children}</main>
       </div>
-    </ToastProvider>
+    </SnackbarProvider>
   );
 }

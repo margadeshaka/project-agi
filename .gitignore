@@ -17,6 +17,13 @@ sdist/
 var/
 wheels/
 *.egg-info/
+
+# Negate Python `lib/` rule for the Next.js UI distribution — its `lib/` is
+# TypeScript source, not Python build output.
+!distribution/agi-ui/lib/
+!distribution/agi-ui/lib/**
+!distribution/agi-ui/app/lib/
+!distribution/agi-ui/app/lib/**
 .installed.cfg
 *.egg
 MANIFEST

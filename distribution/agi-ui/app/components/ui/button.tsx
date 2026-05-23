@@ -16,7 +16,16 @@ import { cn } from '@/lib/utils';
  * All variants are pill-shaped (`rounded-full`) per the M3 shape scale
  * except `icon`, which is fully round.
  */
-type Variant = 'filled' | 'tonal' | 'outlined' | 'text' | 'danger' | 'icon';
+type Variant =
+  | 'filled'
+  | 'tonal'
+  | 'outlined'
+  | 'text'
+  | 'danger'
+  | 'icon'
+  | 'primary'
+  | 'secondary'
+  | 'ghost';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -35,6 +44,11 @@ const variantStyle: Record<Variant, string> = {
   danger:
     'bg-[var(--md-error-container)] text-[var(--md-on-error-container)] hover:shadow-[var(--md-elev-1)]',
   icon: 'bg-transparent text-[var(--md-on-surface-variant)] hover:bg-[var(--md-on-surface)]/8 rounded-full',
+  primary:
+    'bg-[var(--md-primary)] text-[var(--md-on-primary)] hover:shadow-[var(--md-elev-1)]',
+  secondary:
+    'bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] hover:shadow-[var(--md-elev-1)]',
+  ghost: 'bg-transparent text-[var(--md-on-surface-variant)] hover:bg-[var(--md-on-surface)]/8',
 };
 
 const sizeStyle: Record<Size, string> = {

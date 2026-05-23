@@ -1,82 +1,286 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * /tools/:name — tool detail with JSON Schema viewer + test-invoke.
- *
- * FR-TOOL-02: JSON Schema for input + output + side-effect + rate-limit.
- * FR-TOOL-03: schema-driven form, calls POST /tools/:name on submit.
- */
+'use client';
 
-import { runtimeFetch, RuntimeError } from '../../components/runtime-fetch';
-import type { ToolDetail } from '@/lib/api/types';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { CodeBlock } from '../../components/ui/code-block';
-import { ErrorState, ForbiddenState } from '../../components/ui/empty-state';
-import { TestInvokePanel } from './test-invoke';
+import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import {
+  Card,
+  Dialog,
+  Empty,
+  ExtendedFab,
+  Icon,
+  InputChip,
+  Menu,
+  Pill,
+  ScreenHead,
+  SideEffectPill,
+  Switch,
+  useSnackbar,
+} from '../../components/m3';
+import { DATA } from '../../mock/data';
 
-interface PageProps {
-  params: { name: string };
-}
-
-async function loadTool(name: string): Promise<{ tool: ToolDetail | null; error: RuntimeError | null }> {
-  try {
-    const tool = await runtimeFetch<ToolDetail>(`/tools/${encodeURIComponent(name)}`);
-    return { tool, error: null };
-  } catch (err) {
-    if (err instanceof RuntimeError) return { tool: null, error: err };
-    throw err;
+const INPUT_SCHEMA = `{
+  "type": "object",
+  "required": ["account_id", "amount", "reason"],
+  "properties": {
+    "account_id": { "type": "string", "pattern": "^C-\\\\d{4,6}$" },
+    "amount":     { "type": "number", "minimum": -500, "maximum": 500 },
+    "reason":     { "type": "string", "minLength": 4, "maxLength": 200 },
+    "reference":  { "type": "string", "format": "uuid" }
   }
+}`;
+
+const RESULT_SCHEMA = `{
+  "type": "object",
+  "properties": {
+    "adjustment_id":   { "type": "string" },
+    "applied":         { "type": "boolean" },
+    "dry_run":         { "type": "boolean" },
+    "balance_after":   { "type": "number" }
+  }
+}`;
+
+interface InvokeResult {
+  status: number;
+  cid: string;
+  body: Record<string, unknown>;
 }
 
-export default async function ToolDetailPage({ params }: PageProps) {
-  const name = decodeURIComponent(params.name);
-  const { tool, error } = await loadTool(name);
+export default function ToolDetailScreen() {
+  const params = useParams<{ name: string }>();
+  const router = useRouter();
+  const snackbar = useSnackbar();
+  const name = params?.name ? decodeURIComponent(params.name) : '';
+  const t = DATA.tools.find((x) => x.name === name);
 
-  if (error?.status === 403) return <ForbiddenState />;
-  if (error || !tool) {
+  const [dryRun, setDryRun] = useState(t?.dryRun ?? true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [result, setResult] = useState<InvokeResult | null>(null);
+  const [accountId, setAccountId] = useState('C-91823');
+  const [amount, setAmount] = useState('-12.50');
+  const [reason, setReason] = useState('Goodwill credit for service interruption');
+
+  if (!t) {
     return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Tool</h1>
-        <ErrorState problem={error?.problem ?? { title: 'Tool not found' }} />
-      </section>
+      <Empty
+        title="Tool not found"
+        body={`No tool "${name}" in current hub bundle.`}
+      />
     );
   }
 
-  return (
-    <section className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold font-mono">{tool.name}</h1>
-        <p className="text-sm text-muted">{tool.description}</p>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Badge tone={tool.side_effect === 'write' ? 'write' : 'read'}>{tool.side_effect}</Badge>
-          <Badge tone="info">{tool.rate_limit_class} rate</Badge>
-          <Badge tone="neutral">{tool.domain}</Badge>
-          <Badge tone="neutral">bundle {tool.bundle_version}</Badge>
-          {tool.dry_run_supported && <Badge tone="success">dry-run</Badge>}
-        </div>
-        <p className="font-mono text-xs text-muted">{tool.source_openapi_op}</p>
-      </header>
+  const doInvoke = () => {
+    const cid = 'run-' + Math.random().toString(16).slice(2, 8);
+    setResult({
+      status: 200,
+      cid,
+      body: {
+        adjustment_id: 'ADJ-77381',
+        applied: !dryRun,
+        dry_run: dryRun,
+        account_id: accountId,
+        delta: parseFloat(amount),
+        balance_after: 144.1 + parseFloat(amount),
+        ts: '2026-05-22T13:11:08Z',
+      },
+    });
+    setConfirmOpen(false);
+    snackbar.show({
+      msg: dryRun ? 'Dry-run · 200 OK' : 'Invoked · 200 OK',
+      actionLabel: 'VIEW',
+      action: () => router.push(`/audit/${cid}`),
+    });
+  };
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Input schema</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CodeBlock language="json">{JSON.stringify(tool.input_schema, null, 2)}</CodeBlock>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Output schema</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CodeBlock language="json">{JSON.stringify(tool.output_schema, null, 2)}</CodeBlock>
-          </CardContent>
-        </Card>
+  const attemptInvoke = () => {
+    if (t.side === 'write' && !dryRun) {
+      setConfirmOpen(true);
+      return;
+    }
+    doInvoke();
+  };
+
+  return (
+    <div className="stack">
+      <ScreenHead
+        title={<span className="mono" style={{ color: 'var(--md-primary)' }}>{t.name}</span>}
+        lede={t.desc}
+        meta={`${t.method} ${t.path} · bundle ${t.bundle} · used by ${t.packs.length} pack${
+          t.packs.length === 1 ? '' : 's'
+        }`}
+        right={
+          <Menu
+            trigger={
+              <button type="button" className="icon-btn">
+                <Icon name="settings" size={20} />
+              </button>
+            }
+            items={[
+              {
+                icon: 'copy',
+                label: 'Copy as MCP call',
+                onClick: () => snackbar.show({ msg: 'Copied curl-shaped request' }),
+              },
+              { icon: 'download', label: 'Download JSON Schema' },
+              { icon: 'external', label: 'View OpenAPI source' },
+              { divider: true },
+              { icon: 'x', label: 'Disable in pack' },
+            ]}
+          />
+        }
+      />
+
+      <div className="grid-side">
+        <div className="stack">
+          <Card title="Schema · input">
+            <pre className="code">{INPUT_SCHEMA}</pre>
+          </Card>
+          <Card title="Schema · result">
+            <pre className="code">{RESULT_SCHEMA}</pre>
+          </Card>
+        </div>
+
+        <div className="stack">
+          <Card
+            title="Test invoke"
+            right={
+              t.side === 'write' ? (
+                <Pill kind="warn">⚠ side-effect</Pill>
+              ) : (
+                <Pill kind="good">read-only</Pill>
+              )
+            }
+          >
+            {t.side === 'write' && (
+              <div
+                className="row between"
+                style={{
+                  marginBottom: 16,
+                  padding: '12px 14px',
+                  background: 'var(--md-warning-container)',
+                  color: 'var(--md-on-warning-container)',
+                  borderRadius: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500 }}>Dry-run</div>
+                  <div className="mono" style={{ fontSize: 11, opacity: 0.85 }}>
+                    Sends <code>X-Dry-Run: 1</code>
+                  </div>
+                </div>
+                <Switch checked={dryRun} onChange={setDryRun} />
+              </div>
+            )}
+
+            <div className="stack" style={{ gap: 14 }}>
+              <div>
+                <label className="muted mono" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                  account_id <span style={{ color: 'var(--md-error)' }}>*</span>
+                </label>
+                <input
+                  className="input"
+                  style={{ width: '100%' }}
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="muted mono" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                  amount <span style={{ color: 'var(--md-error)' }}>*</span>
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  style={{ width: '100%' }}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="muted mono" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
+                  reason <span style={{ color: 'var(--md-error)' }}>*</span>
+                </label>
+                <textarea
+                  className="input"
+                  rows={2}
+                  style={{ width: '100%', height: 'auto', paddingTop: 10, resize: 'vertical' }}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </div>
+
+              <button type="button" className="btn primary" onClick={attemptInvoke}>
+                <Icon name="play" size={16} /> {dryRun ? 'Dry-run invoke' : 'Invoke'}
+              </button>
+            </div>
+
+            {result && (
+              <div style={{ marginTop: 18 }}>
+                <div className="row between" style={{ marginBottom: 10 }}>
+                  <Pill kind="good">{result.status} OK</Pill>
+                  <a
+                    className="mono"
+                    style={{ fontSize: 12 }}
+                    onClick={() => router.push(`/audit/${result.cid}`)}
+                  >
+                    {result.cid} →
+                  </a>
+                </div>
+                <pre className="code">{JSON.stringify(result.body, null, 2)}</pre>
+              </div>
+            )}
+          </Card>
+
+          <Card title="Source" tight>
+            <div className="stack" style={{ gap: 10, fontSize: 12.5 }}>
+              <div>
+                <span className="muted mono" style={{ fontSize: 11 }}>OPENAPI</span>
+                <div className="mono">openapi/{t.domain}.yaml</div>
+              </div>
+              <div>
+                <span className="muted mono" style={{ fontSize: 11 }}>OPERATION_ID</span>
+                <div className="mono">{t.name.replace(/\./g, '')}</div>
+              </div>
+              <div>
+                <span className="muted mono" style={{ fontSize: 11 }}>RATE-LIMIT CLASS</span>
+                <div className="mono">{t.rate}</div>
+              </div>
+              <div>
+                <span className="muted mono" style={{ fontSize: 11 }}>USED BY</span>
+                <div className="assist-row">
+                  {t.packs.map((p) => (
+                    <InputChip key={p} lead={p[0].toUpperCase()} label={p} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <TestInvokePanel tool={tool} />
-    </section>
+      <Dialog
+        open={confirmOpen}
+        icon="info"
+        title="Invoke for real?"
+        onClose={() => setConfirmOpen(false)}
+        actions={
+          <>
+            <button type="button" className="btn text" onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className="btn primary" onClick={doInvoke}>
+              Yes, apply
+            </button>
+          </>
+        }
+      >
+        This tool has <strong>side-effects</strong> and dry-run is OFF. Calling it will apply an
+        adjustment of <strong>{amount}</strong> to account <strong>{accountId}</strong>. The action
+        will be recorded in the AI-Trail.
+      </Dialog>
+
+      <ExtendedFab icon="play" label={dryRun ? 'Dry-run' : 'Invoke'} onClick={attemptInvoke} />
+    </div>
   );
 }

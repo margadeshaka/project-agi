@@ -1,101 +1,111 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * /packs — pack list (FR-PACK-01).
- *
- * Admins see every pack; operators see only their scoped packs (runtime
- * enforces; the UI just renders what comes back).
- */
+'use client';
 
 import Link from 'next/link';
-import { runtimeFetch, RuntimeError } from '../components/runtime-fetch';
-import type { Pack } from '@/lib/api/types';
-import { EmptyState, ErrorState } from '../components/ui/empty-state';
-import { Card } from '../components/ui/card';
+import { useState } from 'react';
+import { Icon, Pill, ScreenHead, SearchInput } from '../components/m3';
+import { DATA } from '../mock/data';
 
-async function loadPacks(): Promise<{ packs: Pack[] | null; error: RuntimeError | null }> {
-  try {
-    const packs = await runtimeFetch<Pack[]>('/admin/packs');
-    return { packs, error: null };
-  } catch (err) {
-    if (err instanceof RuntimeError) return { packs: null, error: err };
-    throw err;
-  }
-}
-
-function ThemeSwatch({ hex }: { hex: string }) {
-  // hex is data, not a literal — CSS variable injected via inline style.
+export default function PacksScreen() {
+  const allowed = DATA.packs;
+  const [q, setQ] = useState('');
   return (
-    <span
-      aria-hidden="true"
-      className="inline-block h-4 w-4 rounded border border-border align-middle"
-      style={{ background: hex }}
-    />
-  );
-}
-
-export default async function PacksPage() {
-  const { packs, error } = await loadPacks();
-
-  if (error) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Packs</h1>
-        <ErrorState problem={error.problem} />
-      </section>
-    );
-  }
-
-  if (!packs || packs.length === 0) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Packs</h1>
-        <EmptyState
-          title="No packs deployed"
-          description="Drop a folder under packs/ and reload — see the getting-started docs."
-          action={
-            <a
-              className="text-sm text-accent underline"
-              href="https://github.com/comviva/project-agi/blob/main/docs/getting-started.md"
-            >
-              docs ↗
-            </a>
-          }
-        />
-      </section>
-    );
-  }
-
-  return (
-    <section className="space-y-4">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Packs</h1>
-        <span className="text-xs text-muted">{packs.length} pack{packs.length === 1 ? '' : 's'}</span>
-      </header>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {packs.map((pack) => (
-          <li key={pack.slug}>
-            <Link
-              href={`/packs/${pack.slug}/overview`}
-              className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Card className="hover:bg-foreground/5">
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-base font-semibold">{pack.display_name}</h2>
-                  <span className="text-xs text-muted">{pack.vertical}</span>
-                </div>
-                <p className="font-mono text-xs text-muted">{pack.slug}</p>
-                <p className="text-xs text-muted">sha {pack.sha.slice(0, 12)}</p>
-                <dl className="mt-2 grid grid-cols-2 gap-1 text-xs">
-                  <dt className="text-muted">Tools</dt>
-                  <dd className="text-foreground">{pack.tool_count}</dd>
-                  <dt className="text-muted">KB articles</dt>
-                  <dd className="text-foreground">{pack.kb_article_count}</dd>
-                </dl>
-              </Card>
+    <div className="stack">
+      <ScreenHead
+        title="Packs"
+        lede="Brand-packs are the unit of multi-tenant config. Each is loaded from disk and identified by its slug and SHA."
+        meta={`${allowed.length} packs deployed · YAML on disk is source of truth`}
+        right={
+          <>
+            <Link href="/packs/new" className="btn primary">
+              <Icon name="plus" size={18} /> New pack
             </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+            <button type="button" className="btn">
+              <Icon name="refresh" size={18} /> Rescan
+            </button>
+          </>
+        }
+      />
+
+      <div className="tbl-wrap">
+        <div className="filterbar">
+          <SearchInput value={q} onChange={setQ} placeholder="Search by slug or name" width={280} />
+          <select className="select">
+            <option>Vertical: any</option>
+            <option>customer support</option>
+            <option>logistics</option>
+            <option>RAG / knowledge</option>
+            <option>blank template</option>
+          </select>
+          <select className="select">
+            <option>Reindex: any</option>
+            <option>fresh</option>
+            <option>stale (&gt;24h)</option>
+          </select>
+          <div className="results">
+            {allowed.length} of {DATA.packs.length}
+          </div>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Pack</th>
+              <th>Vertical</th>
+              <th>Source</th>
+              <th>SHA</th>
+              <th>Tools</th>
+              <th>KB articles</th>
+              <th>Last reindex</th>
+              <th>Events 24h</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {allowed
+              .filter(
+                (p) =>
+                  !q ||
+                  p.slug.includes(q.toLowerCase()) ||
+                  p.name.toLowerCase().includes(q.toLowerCase()),
+              )
+              .map((p) => (
+                <tr key={p.slug}>
+                  <td>
+                    <Link
+                      href={`/packs/${p.slug}`}
+                      className="row"
+                      style={{ gap: 10, color: 'inherit' }}
+                    >
+                      <span className="swatch" style={{ background: p.primary }} />
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{p.name}</div>
+                        <div className="sub mono">{p.slug}</div>
+                      </div>
+                    </Link>
+                  </td>
+                  <td>
+                    <Pill>{p.vertical}</Pill>
+                  </td>
+                  <td className="mono">{p.source}</td>
+                  <td className="mono">{p.sha}</td>
+                  <td className="num">{p.tools}</td>
+                  <td className="num">{p.kbArticles}</td>
+                  <td className="mono">
+                    {p.reindexStale ? (
+                      <Pill kind="warn">stale · {p.reindex}</Pill>
+                    ) : (
+                      <span className="dim">{p.reindex}</span>
+                    )}
+                  </td>
+                  <td className="num">{p.events24h.tool + p.events24h.llm + p.events24h.handoff}</td>
+                  <td>
+                    <Icon name="chev" size={14} />
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

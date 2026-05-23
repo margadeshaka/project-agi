@@ -1,120 +1,200 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * /audit/:correlation_id — event tree for one agent run (FR-TRAIL-02).
- *
- * FR-TRAIL-03: "Open same run in Langfuse" link, disabled when the runtime
- *              has no langfuse_url configured.
- */
+'use client';
 
-import Link from 'next/link';
-import { runtimeFetch, RuntimeError } from '../../components/runtime-fetch';
-import type { TrailRun } from '@/lib/api/types';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { CodeBlock } from '../../components/ui/code-block';
-import { ErrorState, ForbiddenState } from '../../components/ui/empty-state';
+import { useParams } from 'next/navigation';
+import { useState } from 'react';
+import { Card, Empty, Icon, Pill, ScreenHead, useSnackbar } from '../../components/m3';
+import { DATA } from '../../mock/data';
 
-interface PageProps {
-  params: { correlation_id: string };
-}
-
-async function loadRun(cid: string): Promise<{ run: TrailRun | null; error: RuntimeError | null }> {
-  try {
-    const run = await runtimeFetch<TrailRun>(`/trail/${encodeURIComponent(cid)}`);
-    return { run, error: null };
-  } catch (err) {
-    if (err instanceof RuntimeError) return { run: null, error: err };
-    throw err;
+const PAYLOADS: Record<string, string> = {
+  'tool_call:billing.adjust_charge': `{
+  "tool": "billing.adjust_charge",
+  "args": {
+    "account_id": "C-91823",
+    "amount": -12.50,
+    "reason": "Goodwill credit for service interruption",
+    "reference": "f4c2a8e1-7d3b-4a91-b8e2-1d9c4a5f8e21"
+  },
+  "X-Dry-Run": false,
+  "scope": "agi:operator:support-demo"
+}`,
+  'tool_result:billing.list_invoices': `{
+  "status": 200,
+  "elapsed_ms": 184,
+  "result": {
+    "count": 1,
+    "invoices": [
+      {
+        "invoice_id": "INV-77381",
+        "amount_due": 156.60,
+        "currency": "USD",
+        "due_date": "2026-06-05"
+      }
+    ]
   }
-}
+}`,
+  'tool_call:billing.list_invoices': `{
+  "tool": "billing.list_invoices",
+  "args": { "account_id": "C-91823", "limit": 5 },
+  "scope": "agi:operator:support-demo"
+}`,
+  'llm_request:openai/gpt-4o': `{
+  "model": "openai/gpt-4o",
+  "messages": [
+    { "role": "system", "content": "[SYSTEM PROMPT · packs/support-demo/system.reasoner.md @ build-7c34]" },
+    { "role": "user",   "content": "Why was my invoice 12.50 higher this month?" }
+  ],
+  "temperature": 0.3,
+  "max_tokens": 4096
+}`,
+  'llm_response:openai/gpt-4o': `{
+  "model": "openai/gpt-4o",
+  "tokens": { "in": 142, "out": 84, "total": 226 },
+  "stop_reason": "end_turn",
+  "cost_usd": 0.00284,
+  "content": "I see an add-on seats charge of 12.50 on invoice INV-77381..."
+}`,
+};
 
-export default async function AuditDetailPage({ params }: PageProps) {
-  const cid = decodeURIComponent(params.correlation_id);
-  const { run, error } = await loadRun(cid);
+export default function AuditDetailScreen() {
+  const params = useParams<{ correlation_id: string }>();
+  const cid = params?.correlation_id;
+  const snackbar = useSnackbar();
+  const [selected, setSelected] = useState(0);
 
-  if (error?.status === 403) return <ForbiddenState />;
-  if (error || !run) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Audit run</h1>
-        <ErrorState problem={error?.problem ?? { title: 'Run not found' }} />
-      </section>
-    );
+  const matched = DATA.audit.filter((e) => e.cid === cid);
+  const events = matched.length > 0 ? matched : DATA.audit.slice(0, 1);
+  const ev = events[selected];
+  if (!cid || !ev) {
+    return <Empty title="Correlation not found" body="No event with this correlation_id." />;
   }
+
+  const payload =
+    PAYLOADS[`${ev.event}:${ev.target}`] ??
+    `{
+  "event": "${ev.event}",
+  "target": "${ev.target}",
+  "ts": "${ev.date}T${ev.ts}Z",
+  "note": "${ev.note}"
+}`;
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold font-mono">{run.correlation_id}</h1>
-        <p className="text-xs text-muted">
-          pack <span className="font-mono">{run.pack}</span> · session{' '}
-          <span className="font-mono">{run.session_id}</span> · started {run.started_iso}
-          {run.duration_ms ? ` · ${run.duration_ms}ms` : ''} · {run.event_count} events
-        </p>
-        <div className="flex flex-wrap gap-2 pt-1">
-          {run.langfuse_url ? (
-            <a
-              href={run.langfuse_url}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-md bg-accent px-3 py-1 text-xs text-background hover:opacity-90"
-            >
-              Open in Langfuse ↗
+    <div className="stack">
+      <ScreenHead
+        title={<span className="mono">{cid}</span>}
+        lede={`Agent run · ${events[0].pack} · ${events.length} events · session sess-XYZ`}
+        meta={`Started ${events[events.length - 1]?.ts ?? '—'} · ended ${events[0]?.ts ?? '—'} · ${events[0].date}`}
+        right={
+          <>
+            <a className="btn text" href="#">
+              <Icon name="external" size={13} /> Open in Langfuse
             </a>
-          ) : (
             <button
-              disabled
-              title="Langfuse URL not configured in operator settings"
-              className="rounded-md border border-border bg-foreground/5 px-3 py-1 text-xs text-muted"
+              type="button"
+              className="btn"
+              onClick={() =>
+                snackbar.show({ msg: 'Correlation_id copied to clipboard' })
+              }
             >
-              Open in Langfuse ↗
+              <Icon name="copy" /> Copy correlation_id
             </button>
-          )}
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      <ol className="space-y-3" role="list">
-        {run.events.map((event, idx) => (
-          <li key={`${event.timestamp_iso}-${idx}`}>
-            <Card>
-              <CardHeader>
-                <div className="flex flex-wrap items-baseline gap-2">
-                  {event.side_effect && (
-                    <span
-                      aria-label="side-effect"
-                      className="inline-block h-2 w-2 rounded-full bg-danger"
-                    />
-                  )}
-                  <CardTitle className="text-sm">
-                    {event.event_type}
-                    {event.tool_name && (
-                      <>
-                        {' '}
-                        <Link
-                          href={`/tools/${encodeURIComponent(event.tool_name)}`}
-                          className="font-mono text-xs text-accent underline"
-                        >
-                          {event.tool_name}
-                        </Link>
-                      </>
-                    )}
-                  </CardTitle>
-                  <time className="font-mono text-xs text-muted">{event.timestamp_iso}</time>
-                  {event.model_id && <Badge tone="info">{event.model_id}</Badge>}
-                  {event.tokens_in != null && (
-                    <span className="text-xs text-muted">
-                      {event.tokens_in}↓ / {event.tokens_out ?? 0}↑ tokens
-                    </span>
+      <div className="grid-side">
+        <Card title="Event tree" right={`${events.length} events`}>
+          <div className="tree">
+            {events.map((e, i) => (
+              <div
+                key={i}
+                className={`tree-row ${i === selected ? 'selected' : ''}`.trim()}
+                onClick={() => setSelected(i)}
+              >
+                <div>
+                  {e.side === 'write' ? (
+                    <span className="dot bad" />
+                  ) : e.event === 'error' ? (
+                    <span className="dot bad" />
+                  ) : (
+                    <span className="dot good" />
                   )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <CodeBlock language="json">{JSON.stringify(event.payload, null, 2)}</CodeBlock>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ol>
-    </section>
+                <div className="ts">{e.ts}</div>
+                <div className={`ev ${e.event}`}>{e.event}</div>
+                <div className="target">
+                  {e.target}
+                  <span
+                    className="mono"
+                    style={{
+                      marginLeft: 8,
+                      color: 'var(--md-on-surface-variant)',
+                      fontSize: 11,
+                    }}
+                  >
+                    {e.note && `· ${e.note}`}
+                  </span>
+                </div>
+                <div className="right mono">{i === 0 ? '↓' : `+${i}s`}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="stack">
+          <Card
+            title={`Payload · ${ev.event}`}
+            right={
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => snackbar.show({ msg: 'Payload copied to clipboard' })}
+              >
+                <Icon name="copy" size={11} /> Copy
+              </button>
+            }
+          >
+            <pre className="code" style={{ maxHeight: 320 }}>
+              {payload}
+            </pre>
+          </Card>
+
+          <Card title="Run summary" tight>
+            <div className="stack" style={{ gap: 8, fontSize: 12.5 }}>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>
+                  DURATION
+                </span>
+                <span className="mono">7.2s</span>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>
+                  TOKENS IN/OUT
+                </span>
+                <span className="mono">142 / 84</span>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>
+                  COST (USD)
+                </span>
+                <span className="mono">$0.0028</span>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>
+                  SIDE-EFFECTS
+                </span>
+                <Pill kind="warn">1 write</Pill>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>
+                  RESULT
+                </span>
+                <Pill kind="good">success</Pill>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

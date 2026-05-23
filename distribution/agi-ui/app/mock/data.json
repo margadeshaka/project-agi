@@ -1,0 +1,1223 @@
+{
+  "env": { "name": "project-agi", "deploy": "production", "version": "v1.0.0-rc4" },
+  "user": {
+    "admin": {
+      "id": "alex@example.org",
+      "initials": "AL",
+      "scopes": ["agi:admin"],
+      "persona": "Platform admin"
+    },
+    "operator": {
+      "id": "ops@acme.example",
+      "initials": "OP",
+      "scopes": ["agi:operator:support-demo"],
+      "persona": "Tenant operator"
+    },
+    "dev": {
+      "id": "dev@example.org",
+      "initials": "DV",
+      "scopes": ["agi:dev"],
+      "persona": "Developer"
+    },
+    "viewer": {
+      "id": "audit@gov.example",
+      "initials": "AU",
+      "scopes": ["agi:viewer"],
+      "persona": "Auditor / viewer"
+    }
+  },
+  "health": [
+    {
+      "id": "agi-runtime",
+      "name": "agi-runtime",
+      "status": "good",
+      "detail": "OK · 12ms median · 4 replicas",
+      "check": "2s ago"
+    },
+    {
+      "id": "agi-core-hub",
+      "name": "agi-core hub",
+      "status": "good",
+      "detail": "bundle v2026-05-21 · 3 tools added",
+      "check": "12s ago"
+    },
+    {
+      "id": "qdrant",
+      "name": "vector / qdrant",
+      "status": "good",
+      "detail": "4 indexes · 1.2M vectors · 88% util",
+      "check": "8s ago"
+    },
+    {
+      "id": "langfuse",
+      "name": "langfuse",
+      "status": "good",
+      "detail": "12,481 traces today · 312/min",
+      "check": "4s ago"
+    },
+    {
+      "id": "openai",
+      "name": "llm · openai",
+      "status": "good",
+      "detail": "142ms median · 0.2% error",
+      "check": "11s ago"
+    },
+    {
+      "id": "bedrock",
+      "name": "llm · bedrock",
+      "status": "good",
+      "detail": "188ms median · eu-west-1",
+      "check": "9s ago"
+    },
+    {
+      "id": "ollama",
+      "name": "llm · ollama (local)",
+      "status": "warn",
+      "detail": "host not reachable from this pod · falling back to bedrock",
+      "check": "1m ago"
+    },
+    {
+      "id": "storage",
+      "name": "storage",
+      "status": "good",
+      "detail": "postgres 14 · 23GB / 100GB",
+      "check": "5s ago"
+    },
+    {
+      "id": "oidc",
+      "name": "auth · oidc issuer",
+      "status": "good",
+      "detail": "issuer reachable · jwks fresh",
+      "check": "14s ago"
+    }
+  ],
+  "packs": [
+    {
+      "slug": "starter",
+      "name": "Starter",
+      "vertical": "blank template",
+      "sha": "8a3f612",
+      "source": "packs/starter",
+      "primary": "#295EA7",
+      "tools": 4,
+      "kbArticles": 6,
+      "reindex": "4h ago",
+      "reindexStale": false,
+      "events24h": { "tool": 28, "llm": 14, "error": 0, "handoff": 0 },
+      "roles": {
+        "reasoning": "openai/gpt-4o",
+        "fast": "openai/gpt-4o-mini",
+        "extractor": "bedrock/claude-3-5-haiku"
+      },
+      "desc": "Empty pack with a tiny KB and a few common tools. Fork this when starting a new use case."
+    },
+    {
+      "slug": "support-demo",
+      "name": "Support Demo",
+      "vertical": "customer support",
+      "sha": "4d1c0a8",
+      "source": "packs/support-demo",
+      "primary": "#1F8A60",
+      "tools": 8,
+      "kbArticles": 12,
+      "reindex": "12m ago",
+      "reindexStale": false,
+      "events24h": { "tool": 142, "llm": 78, "error": 23, "handoff": 3 },
+      "roles": {
+        "reasoning": "openai/gpt-4o",
+        "fast": "ollama/llama3.2",
+        "extractor": "openai/gpt-4o-mini"
+      },
+      "desc": "Reference customer-support agent: ticketing, KB search, escalation handoff. Reusable across SaaS verticals."
+    },
+    {
+      "slug": "fleet-demo",
+      "name": "Fleet Demo",
+      "vertical": "logistics",
+      "sha": "c14b2e0",
+      "source": "packs/fleet-demo",
+      "primary": "#7C3AED",
+      "tools": 5,
+      "kbArticles": 9,
+      "reindex": "3d ago",
+      "reindexStale": true,
+      "events24h": { "tool": 18, "llm": 12, "error": 0, "handoff": 1 },
+      "roles": {
+        "reasoning": "bedrock/claude-3-7-sonnet",
+        "fast": "bedrock/claude-3-5-haiku",
+        "extractor": "openai/gpt-4o-mini"
+      },
+      "desc": "Dispatch and vehicle-status agent. Demonstrates tool allow-listing and side-effect confirmations."
+    },
+    {
+      "slug": "research-demo",
+      "name": "Research Demo",
+      "vertical": "RAG / knowledge",
+      "sha": "e92f4c1",
+      "source": "packs/research-demo",
+      "primary": "#B8540F",
+      "tools": 3,
+      "kbArticles": 184,
+      "reindex": "1h ago",
+      "reindexStale": false,
+      "events24h": { "tool": 64, "llm": 188, "error": 1, "handoff": 0 },
+      "roles": {
+        "reasoning": "bedrock/claude-3-7-sonnet",
+        "fast": "openai/gpt-4o-mini",
+        "extractor": "openai/gpt-4o-mini"
+      },
+      "desc": "Long-document Q&A over a large KB. Heavy on retrieval, light on side-effects."
+    }
+  ],
+  "tools": [
+    {
+      "name": "tickets.create",
+      "domain": "support",
+      "method": "POST",
+      "path": "/v1/tickets",
+      "side": "write",
+      "rate": "med",
+      "desc": "Open a support ticket.",
+      "packs": ["support-demo", "starter"],
+      "bundle": "v2026-05-21",
+      "dryRun": true
+    },
+    {
+      "name": "tickets.get",
+      "domain": "support",
+      "method": "GET",
+      "path": "/v1/tickets/{id}",
+      "side": "read",
+      "rate": "low",
+      "desc": "Retrieve a single ticket with comments.",
+      "packs": ["support-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "tickets.list",
+      "domain": "support",
+      "method": "GET",
+      "path": "/v1/tickets",
+      "side": "read",
+      "rate": "low",
+      "desc": "List tickets matching a filter.",
+      "packs": ["support-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "tickets.add_comment",
+      "domain": "support",
+      "method": "POST",
+      "path": "/v1/tickets/{id}/comments",
+      "side": "write",
+      "rate": "med",
+      "desc": "Post a comment on a ticket.",
+      "packs": ["support-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": true
+    },
+    {
+      "name": "billing.list_invoices",
+      "domain": "billing",
+      "method": "GET",
+      "path": "/v1/invoices",
+      "side": "read",
+      "rate": "low",
+      "desc": "List invoices for a customer account.",
+      "packs": ["support-demo", "starter"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "billing.adjust_charge",
+      "domain": "billing",
+      "method": "POST",
+      "path": "/v1/accounts/{id}/adjustments",
+      "side": "write",
+      "rate": "high",
+      "desc": "Apply a one-time adjustment to an account.",
+      "packs": ["support-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": true
+    },
+    {
+      "name": "crm.get_customer",
+      "domain": "crm",
+      "method": "GET",
+      "path": "/v1/customers/{id}",
+      "side": "read",
+      "rate": "low",
+      "desc": "Retrieve a customer profile and account history.",
+      "packs": ["support-demo", "starter"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "crm.update_contact",
+      "domain": "crm",
+      "method": "PATCH",
+      "path": "/v1/customers/{id}/contacts/{cid}",
+      "side": "write",
+      "rate": "low",
+      "desc": "Update a contact's phone, email, or address.",
+      "packs": ["support-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": true
+    },
+    {
+      "name": "inventory.check_stock",
+      "domain": "inventory",
+      "method": "GET",
+      "path": "/v1/sku/{id}/stock",
+      "side": "read",
+      "rate": "low",
+      "desc": "Check available stock for an SKU.",
+      "packs": ["fleet-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "fleet.list_vehicles",
+      "domain": "fleet",
+      "method": "GET",
+      "path": "/v1/vehicles",
+      "side": "read",
+      "rate": "low",
+      "desc": "List vehicles in the operator's fleet.",
+      "packs": ["fleet-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "fleet.dispatch",
+      "domain": "fleet",
+      "method": "POST",
+      "path": "/v1/dispatches",
+      "side": "write",
+      "rate": "med",
+      "desc": "Create a dispatch order.",
+      "packs": ["fleet-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": true
+    },
+    {
+      "name": "shipping.track",
+      "domain": "shipping",
+      "method": "GET",
+      "path": "/v1/shipments/{id}",
+      "side": "read",
+      "rate": "low",
+      "desc": "Get current status of a shipment.",
+      "packs": ["fleet-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "kb.search",
+      "domain": "kb",
+      "method": "POST",
+      "path": "/v1/kb/search",
+      "side": "read",
+      "rate": "high",
+      "desc": "Hybrid (vector + keyword) search across pack KB.",
+      "packs": ["support-demo", "starter", "fleet-demo", "research-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "kb.cite",
+      "domain": "kb",
+      "method": "POST",
+      "path": "/v1/kb/cite",
+      "side": "read",
+      "rate": "med",
+      "desc": "Generate cited spans for an answer.",
+      "packs": ["research-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    },
+    {
+      "name": "escalate_to_human",
+      "domain": "workflow",
+      "method": "POST",
+      "path": "/v1/handoffs",
+      "side": "write",
+      "rate": "low",
+      "desc": "Hand off to a human agent.",
+      "packs": ["support-demo", "fleet-demo"],
+      "bundle": "v2026-05-21",
+      "dryRun": false
+    }
+  ],
+  "roleBindings": [
+    {
+      "role": "reasoning",
+      "model": "bedrock/claude-3-7-sonnet",
+      "region": "eu-west-1",
+      "temp": 0.3,
+      "maxTokens": 4096,
+      "health": "good"
+    },
+    {
+      "role": "fast",
+      "model": "bedrock/claude-3-5-haiku",
+      "region": "eu-west-1",
+      "temp": 0.2,
+      "maxTokens": 2048,
+      "health": "good"
+    },
+    {
+      "role": "extractor",
+      "model": "openai/gpt-4o-mini",
+      "region": "us-east-1",
+      "temp": 0.0,
+      "maxTokens": 1024,
+      "health": "good"
+    },
+    {
+      "role": "fallback",
+      "model": "ollama/llama3.2",
+      "region": "local",
+      "temp": 0.4,
+      "maxTokens": 2048,
+      "health": "warn"
+    }
+  ],
+  "providers": [
+    { "id": "openai", "region": "us-east-1", "latency": 142, "error": 0.2, "status": "good" },
+    { "id": "bedrock", "region": "eu-west-1", "latency": 188, "error": 0.1, "status": "good" },
+    { "id": "ollama", "region": "local", "latency": 0, "error": 0, "status": "warn" }
+  ],
+  "useCases": [
+    {
+      "slug": "support_assistant",
+      "name": "Support assistant",
+      "version": "0.3.0",
+      "packs": ["support-demo", "starter"],
+      "tools": 5,
+      "status": "good",
+      "p50": 1240,
+      "p95": 3120,
+      "runs24h": 482
+    },
+    {
+      "slug": "knowledge_qa",
+      "name": "Knowledge Q&A",
+      "version": "0.5.1",
+      "packs": ["research-demo"],
+      "tools": 3,
+      "status": "good",
+      "p50": 980,
+      "p95": 2310,
+      "runs24h": 1217
+    },
+    {
+      "slug": "onboarding_bot",
+      "name": "Onboarding bot",
+      "version": "0.1.0",
+      "packs": ["starter"],
+      "tools": 4,
+      "status": "warn",
+      "p50": 2840,
+      "p95": 7120,
+      "runs24h": 38
+    },
+    {
+      "slug": "dispatch_planner",
+      "name": "Dispatch planner",
+      "version": "0.4.2",
+      "packs": ["fleet-demo"],
+      "tools": 5,
+      "status": "good",
+      "p50": 1480,
+      "p95": 3940,
+      "runs24h": 91
+    },
+    {
+      "slug": "ticket_triage",
+      "name": "Ticket triage",
+      "version": "0.6.0",
+      "packs": ["support-demo"],
+      "tools": 4,
+      "status": "good",
+      "p50": 760,
+      "p95": 1940,
+      "runs24h": 1247
+    }
+  ],
+  "kb": {
+    "support-demo": [
+      {
+        "title": "Refund policy",
+        "format": "md",
+        "size": "4.2 KB",
+        "chunks": 12,
+        "lastEmbed": "12m ago"
+      },
+      {
+        "title": "Account recovery flow",
+        "format": "md",
+        "size": "3.1 KB",
+        "chunks": 8,
+        "lastEmbed": "12m ago"
+      },
+      {
+        "title": "Plan change procedure",
+        "format": "md",
+        "size": "2.8 KB",
+        "chunks": 6,
+        "lastEmbed": "12m ago"
+      },
+      {
+        "title": "Common error codes",
+        "format": "md",
+        "size": "5.4 KB",
+        "chunks": 14,
+        "lastEmbed": "12m ago"
+      },
+      {
+        "title": "Pricing tiers",
+        "format": "json",
+        "size": "2.1 KB",
+        "chunks": 5,
+        "lastEmbed": "12m ago"
+      },
+      {
+        "title": "Customer compensation matrix",
+        "format": "md",
+        "size": "8.9 KB",
+        "chunks": 22,
+        "lastEmbed": "1d ago"
+      },
+      {
+        "title": "Refund SOP",
+        "format": "md",
+        "size": "3.7 KB",
+        "chunks": 9,
+        "lastEmbed": "1d ago"
+      },
+      {
+        "title": "Onboarding playbook",
+        "format": "md",
+        "size": "12.4 KB",
+        "chunks": 31,
+        "lastEmbed": "3d ago"
+      },
+      {
+        "title": "Escalation matrix",
+        "format": "md",
+        "size": "2.2 KB",
+        "chunks": 5,
+        "lastEmbed": "1d ago"
+      },
+      {
+        "title": "Outage response runbook",
+        "format": "md",
+        "size": "4.1 KB",
+        "chunks": 11,
+        "lastEmbed": "1d ago"
+      },
+      {
+        "title": "Account merge procedure",
+        "format": "md",
+        "size": "3.9 KB",
+        "chunks": 10,
+        "lastEmbed": "3d ago"
+      },
+      {
+        "title": "Trial extension SOP",
+        "format": "md",
+        "size": "2.6 KB",
+        "chunks": 7,
+        "lastEmbed": "3d ago"
+      }
+    ],
+    "starter": [
+      {
+        "title": "Pack authoring guide",
+        "format": "md",
+        "size": "6.8 KB",
+        "chunks": 18,
+        "lastEmbed": "4h ago"
+      },
+      {
+        "title": "Tool side-effect taxonomy",
+        "format": "md",
+        "size": "3.4 KB",
+        "chunks": 9,
+        "lastEmbed": "4h ago"
+      },
+      {
+        "title": "Hello-world example",
+        "format": "md",
+        "size": "1.1 KB",
+        "chunks": 3,
+        "lastEmbed": "4h ago"
+      }
+    ],
+    "fleet-demo": [
+      {
+        "title": "Dispatch SOP",
+        "format": "md",
+        "size": "5.2 KB",
+        "chunks": 14,
+        "lastEmbed": "3d ago"
+      },
+      {
+        "title": "Vehicle status codes",
+        "format": "json",
+        "size": "1.8 KB",
+        "chunks": 4,
+        "lastEmbed": "3d ago"
+      }
+    ],
+    "research-demo": [
+      {
+        "title": "RFC 9457 — Problem Details",
+        "format": "md",
+        "size": "44 KB",
+        "chunks": 92,
+        "lastEmbed": "1h ago"
+      },
+      {
+        "title": "OAuth 2.1 draft",
+        "format": "md",
+        "size": "112 KB",
+        "chunks": 188,
+        "lastEmbed": "1h ago"
+      },
+      {
+        "title": "Model Context Protocol spec",
+        "format": "md",
+        "size": "68 KB",
+        "chunks": 142,
+        "lastEmbed": "1h ago"
+      }
+    ]
+  },
+  "prompts": {
+    "support-demo": [
+      {
+        "name": "system.reasoner.md",
+        "lines": 84,
+        "sha": "a12f4...",
+        "updated": "build-7c34",
+        "body": "# Support agent · reasoner\n\nYou are the reasoning layer for an open-source support agent.\n\n## Goals\n- Resolve the customer's request in the fewest tool calls possible.\n- Never invent invoice amounts; always read from billing.list_invoices.\n- For write tools (billing.adjust_charge, crm.update_contact), summarise the\n  intended change in plain English and require a confirmation step.\n\n## Constraints\n- Do not promise refunds above the configured cap without human handoff.\n- Do not disclose internal SOP article IDs to the customer.\n- Always cite the KB article(s) used in your final answer.\n\n## Output\n- Reply in the customer's language. Default English.\n- End every reply with a one-line summary of which tools you used."
+      },
+      {
+        "name": "system.extractor.md",
+        "lines": 41,
+        "sha": "9bb22...",
+        "updated": "build-7c34",
+        "body": "# Support extractor\n\nExtract structured fields from the user message:\n- intent: enum [billing, account, refund, complaint, info, other]\n- account_id: string | null\n- amount: number | null\n- product_id: string | null\n\nReturn strict JSON. No commentary."
+      },
+      {
+        "name": "tool.escalate_to_human.md",
+        "lines": 18,
+        "sha": "c1109...",
+        "updated": "build-7c34",
+        "body": "Use escalate_to_human only when:\n- refund > configured cap\n- complaint contains \"regulator\" or \"ombudsman\"\n- 3+ failed write attempts in the same session"
+      }
+    ]
+  },
+  "scenarios": {
+    "support-demo": [
+      {
+        "id": "S-01",
+        "name": "Customer asks for refund eligibility",
+        "steps": 5,
+        "tools": ["billing.list_invoices", "kb.search"],
+        "status": "passing"
+      },
+      {
+        "id": "S-02",
+        "name": "Customer disputes a charge (in-policy)",
+        "steps": 7,
+        "tools": ["billing.list_invoices", "billing.adjust_charge"],
+        "status": "passing"
+      },
+      {
+        "id": "S-03",
+        "name": "Customer disputes a charge (out-of-policy)",
+        "steps": 6,
+        "tools": ["billing.list_invoices", "escalate_to_human"],
+        "status": "passing"
+      },
+      {
+        "id": "S-04",
+        "name": "Account recovery walkthrough",
+        "steps": 9,
+        "tools": ["kb.search", "crm.update_contact"],
+        "status": "passing"
+      },
+      {
+        "id": "S-05",
+        "name": "Plan downgrade",
+        "steps": 8,
+        "tools": ["crm.get_customer", "kb.search"],
+        "status": "flaky"
+      },
+      {
+        "id": "S-06",
+        "name": "Outage acknowledgement",
+        "steps": 4,
+        "tools": ["kb.search"],
+        "status": "passing"
+      }
+    ]
+  },
+  "audit": [
+    {
+      "ts": "13:11:09",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-9af3a1",
+      "event": "tool_call",
+      "target": "billing.adjust_charge",
+      "side": "write",
+      "actor": "session/sess-XYZ",
+      "note": "amount: -12.50"
+    },
+    {
+      "ts": "13:11:08",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-9af3a1",
+      "event": "llm_response",
+      "target": "openai/gpt-4o",
+      "side": "",
+      "actor": "session/sess-XYZ",
+      "note": "142 in / 84 out tokens"
+    },
+    {
+      "ts": "13:11:07",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-9af3a1",
+      "event": "llm_request",
+      "target": "openai/gpt-4o",
+      "side": "",
+      "actor": "session/sess-XYZ",
+      "note": "prompt_cache hit 0.0"
+    },
+    {
+      "ts": "13:11:07",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-9af3a1",
+      "event": "tool_result",
+      "target": "billing.list_invoices",
+      "side": "read",
+      "actor": "session/sess-XYZ",
+      "note": "200 · 1 invoice"
+    },
+    {
+      "ts": "13:11:06",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-9af3a1",
+      "event": "tool_call",
+      "target": "billing.list_invoices",
+      "side": "read",
+      "actor": "session/sess-XYZ",
+      "note": "account: C-91823"
+    },
+    {
+      "ts": "13:08:42",
+      "date": "2026-05-22",
+      "pack": "starter",
+      "cid": "run-7c128b",
+      "event": "handoff",
+      "target": "human-tier2",
+      "side": "",
+      "actor": "session/sess-ABC",
+      "note": "reason: out-of-policy refund"
+    },
+    {
+      "ts": "13:08:40",
+      "date": "2026-05-22",
+      "pack": "starter",
+      "cid": "run-7c128b",
+      "event": "tool_call",
+      "target": "escalate_to_human",
+      "side": "write",
+      "actor": "session/sess-ABC",
+      "note": ""
+    },
+    {
+      "ts": "13:07:11",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-3d12fa",
+      "event": "error",
+      "target": "crm.update_contact",
+      "side": "write",
+      "actor": "session/sess-DEF",
+      "note": "409 conflict · stale rev"
+    },
+    {
+      "ts": "13:04:55",
+      "date": "2026-05-22",
+      "pack": "fleet-demo",
+      "cid": "run-1188e7",
+      "event": "tool_call",
+      "target": "fleet.dispatch",
+      "side": "write",
+      "actor": "session/sess-FLT",
+      "note": "vehicle: V-118"
+    },
+    {
+      "ts": "13:04:30",
+      "date": "2026-05-22",
+      "pack": "fleet-demo",
+      "cid": "run-1188e7",
+      "event": "llm_response",
+      "target": "bedrock/sonnet",
+      "side": "",
+      "actor": "session/sess-FLT",
+      "note": "212 in / 156 out"
+    },
+    {
+      "ts": "13:02:18",
+      "date": "2026-05-22",
+      "pack": "research-demo",
+      "cid": "run-44a201",
+      "event": "tool_call",
+      "target": "kb.search",
+      "side": "read",
+      "actor": "session/sess-RES",
+      "note": "q: oauth pkce flow"
+    },
+    {
+      "ts": "13:01:02",
+      "date": "2026-05-22",
+      "pack": "research-demo",
+      "cid": "run-44a201",
+      "event": "llm_request",
+      "target": "openai/gpt-4o",
+      "side": "",
+      "actor": "session/sess-RES",
+      "note": ""
+    },
+    {
+      "ts": "12:59:48",
+      "date": "2026-05-22",
+      "pack": "starter",
+      "cid": "run-7c128b",
+      "event": "llm_response",
+      "target": "openai/gpt-4o",
+      "side": "",
+      "actor": "session/sess-ABC",
+      "note": "188 in / 92 out"
+    },
+    {
+      "ts": "12:58:12",
+      "date": "2026-05-22",
+      "pack": "research-demo",
+      "cid": "run-44a201",
+      "event": "tool_result",
+      "target": "kb.search",
+      "side": "read",
+      "actor": "session/sess-RES",
+      "note": "4 hits"
+    },
+    {
+      "ts": "12:57:00",
+      "date": "2026-05-22",
+      "pack": "support-demo",
+      "cid": "run-22f88c",
+      "event": "error",
+      "target": "openai/gpt-4o",
+      "side": "",
+      "actor": "session/sess-PQR",
+      "note": "429 rate-limit · backed off 2s"
+    }
+  ],
+  "adminLog": [
+    {
+      "ts": "13:14:02",
+      "actor": "alex@example.org",
+      "action": "POST",
+      "target": "/admin/packs/support-demo/reload",
+      "result": "200"
+    },
+    {
+      "ts": "13:11:48",
+      "actor": "alex@example.org",
+      "action": "POST",
+      "target": "/admin/kb/support-demo/reindex",
+      "result": "200"
+    },
+    {
+      "ts": "12:42:11",
+      "actor": "ops@acme.example",
+      "action": "POST",
+      "target": "/admin/kb/support-demo/articles",
+      "result": "201"
+    },
+    {
+      "ts": "12:38:55",
+      "actor": "ops@acme.example",
+      "action": "DELETE",
+      "target": "/admin/kb/support-demo/articles/legacy-faq",
+      "result": "204"
+    },
+    {
+      "ts": "11:18:09",
+      "actor": "alex@example.org",
+      "action": "PATCH",
+      "target": "/admin/llm/override (session)",
+      "result": "200"
+    },
+    {
+      "ts": "10:42:01",
+      "actor": "alex@example.org",
+      "action": "POST",
+      "target": "/admin/packs/research-demo/reload",
+      "result": "200"
+    },
+    {
+      "ts": "09:13:44",
+      "actor": "dev@example.org",
+      "action": "POST",
+      "target": "/tools/billing.list_invoices (test-invoke)",
+      "result": "200"
+    },
+    {
+      "ts": "08:58:22",
+      "actor": "ops@acme.example",
+      "action": "POST",
+      "target": "/admin/kb/support-demo/reindex",
+      "result": "500"
+    }
+  ],
+  "users": [
+    {
+      "id": "alex@example.org",
+      "initials": "AL",
+      "scopes": ["agi:admin"],
+      "lastSeen": "now",
+      "source": "oidc/example"
+    },
+    {
+      "id": "ops@acme.example",
+      "initials": "OP",
+      "scopes": ["agi:operator:support-demo"],
+      "lastSeen": "4m ago",
+      "source": "oidc/acme"
+    },
+    {
+      "id": "dev@example.org",
+      "initials": "DV",
+      "scopes": ["agi:dev"],
+      "lastSeen": "22m ago",
+      "source": "oidc/example"
+    },
+    {
+      "id": "audit@gov.example",
+      "initials": "AU",
+      "scopes": ["agi:viewer"],
+      "lastSeen": "1h ago",
+      "source": "oidc/gov"
+    },
+    {
+      "id": "morgan@example.org",
+      "initials": "MR",
+      "scopes": ["agi:admin"],
+      "lastSeen": "3h ago",
+      "source": "oidc/example"
+    },
+    {
+      "id": "ops@logistics.example",
+      "initials": "LG",
+      "scopes": ["agi:operator:fleet-demo"],
+      "lastSeen": "1d ago",
+      "source": "oidc/logistics"
+    },
+    {
+      "id": "rin@example.org",
+      "initials": "RN",
+      "scopes": ["agi:dev", "agi:viewer"],
+      "lastSeen": "2d ago",
+      "source": "oidc/example"
+    }
+  ],
+  "settings": {
+    "AGI_RUNTIME_URL": "https://runtime.agi.example:8443",
+    "AGI_VECTOR_URL": "qdrant://vectors.agi.example:6333",
+    "AGI_OIDC_ISSUER": "https://auth.example.org/realms/agi",
+    "AGI_LANGFUSE_URL": "https://langfuse.agi.example:3000",
+    "AGI_AUTH_MODE": "oidc",
+    "AGI_ENV": "production",
+    "AGI_TELEMETRY_SAMPLE": "0.10",
+    "AGI_HUB_BUNDLE_PATH": "/var/agi/hub/bundle-2026-05-21.tar.gz"
+  },
+  "jobs": [
+    {
+      "id": "job-9af3",
+      "kind": "kb_reindex",
+      "pack": "support-demo",
+      "progress": 64,
+      "status": "running",
+      "started": "13:14:02",
+      "eta": "1m 12s",
+      "logs": "182 / 284 chunks · embedding batch 7/12"
+    },
+    {
+      "id": "job-8b21",
+      "kind": "pack_reload",
+      "pack": "research-demo",
+      "progress": 100,
+      "status": "succeeded",
+      "started": "13:08:11",
+      "finished": "13:08:13",
+      "logs": "loaded 184 KB articles, 3 tools, 0 prompts"
+    },
+    {
+      "id": "job-7c10",
+      "kind": "hub_build",
+      "pack": "—",
+      "progress": 100,
+      "status": "succeeded",
+      "started": "12:42:00",
+      "finished": "12:42:38",
+      "logs": "compiled 15 tools from 4 OpenAPI specs · bundle v2026-05-21"
+    },
+    {
+      "id": "job-6e92",
+      "kind": "kb_reindex",
+      "pack": "fleet-demo",
+      "progress": 100,
+      "status": "failed",
+      "started": "12:31:09",
+      "finished": "12:31:22",
+      "logs": "ERROR: failed to embed 2 articles (quota exceeded)",
+      "error": "openai quota exceeded"
+    },
+    {
+      "id": "job-5d44",
+      "kind": "pack_reload",
+      "pack": "support-demo",
+      "progress": 100,
+      "status": "succeeded",
+      "started": "11:18:09",
+      "finished": "11:18:11",
+      "logs": "loaded 12 KB articles, 8 tools, 3 prompts"
+    },
+    {
+      "id": "job-4a11",
+      "kind": "kb_reindex",
+      "pack": "starter",
+      "progress": 100,
+      "status": "succeeded",
+      "started": "09:14:00",
+      "finished": "09:14:04",
+      "logs": "30 chunks embedded · 4.0s"
+    },
+    {
+      "id": "job-3f87",
+      "kind": "hub_build",
+      "pack": "—",
+      "progress": 100,
+      "status": "succeeded",
+      "started": "08:58:22",
+      "finished": "08:59:08",
+      "logs": "compiled 15 tools · bundle v2026-05-21"
+    },
+    {
+      "id": "job-2b03",
+      "kind": "scenario_run",
+      "pack": "support-demo",
+      "progress": 100,
+      "status": "succeeded",
+      "started": "08:04:11",
+      "finished": "08:05:42",
+      "logs": "6 scenarios · 5 passed, 1 flaky"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n9",
+      "kind": "warn",
+      "icon": "warning",
+      "title": "Ollama provider unreachable",
+      "body": "Local Ollama host has not responded to health checks for 1m. Falling back to bedrock.",
+      "ts": "2m ago",
+      "unread": true
+    },
+    {
+      "id": "n8",
+      "kind": "info",
+      "icon": "spark",
+      "title": "Hub bundle v2026-05-21 deployed",
+      "body": "3 new tools (kb.cite, tickets.add_comment, shipping.track) and 1 schema change.",
+      "ts": "32m ago",
+      "unread": true
+    },
+    {
+      "id": "n7",
+      "kind": "success",
+      "icon": "check",
+      "title": "KB reindex completed · support-demo",
+      "body": "184 chunks embedded in 4.2 seconds.",
+      "ts": "1h ago",
+      "unread": true
+    },
+    {
+      "id": "n6",
+      "kind": "error",
+      "icon": "error",
+      "title": "Tool error rate elevated · subscription.change_plan",
+      "body": "Error rate jumped to 8.4% over last 15m, above 5% threshold.",
+      "ts": "2h ago",
+      "unread": false
+    },
+    {
+      "id": "n5",
+      "kind": "info",
+      "icon": "info",
+      "title": "Scenario S-05 turned flaky · support-demo",
+      "body": "Last 4 CI runs include 1 unexpected handoff.",
+      "ts": "3h ago",
+      "unread": false
+    },
+    {
+      "id": "n4",
+      "kind": "info",
+      "icon": "user",
+      "title": "New identity active · ops@logistics.example",
+      "body": "Operator added to fleet-demo scope via OIDC.",
+      "ts": "1d ago",
+      "unread": false
+    },
+    {
+      "id": "n3",
+      "kind": "success",
+      "icon": "pack",
+      "title": "Pack research-demo deployed",
+      "body": "184 KB articles · 3 tools allow-listed.",
+      "ts": "1d ago",
+      "unread": false
+    },
+    {
+      "id": "n2",
+      "kind": "warn",
+      "icon": "warning",
+      "title": "Stale KB index · fleet-demo",
+      "body": "Last reindex was 3 days ago. Consider running it again.",
+      "ts": "2d ago",
+      "unread": false
+    },
+    {
+      "id": "n1",
+      "kind": "info",
+      "icon": "spark",
+      "title": "Welcome to project-agi",
+      "body": "You're running v1.0.0-rc4. Read the changelog for what's new.",
+      "ts": "5d ago",
+      "unread": false
+    }
+  ],
+  "metricsTokens": [
+    { "h": "00", "input": 8412, "output": 3104 },
+    { "h": "02", "input": 6240, "output": 2018 },
+    { "h": "04", "input": 4180, "output": 1402 },
+    { "h": "06", "input": 9810, "output": 3402 },
+    { "h": "08", "input": 18420, "output": 6210 },
+    { "h": "10", "input": 24180, "output": 8190 },
+    { "h": "12", "input": 28910, "output": 9810 },
+    { "h": "14", "input": 26410, "output": 8902 },
+    { "h": "16", "input": 22180, "output": 7404 },
+    { "h": "18", "input": 16920, "output": 5810 },
+    { "h": "20", "input": 14180, "output": 4912 },
+    { "h": "22", "input": 9420, "output": 3102 }
+  ],
+  "metricsLatency": [
+    { "h": "00", "p50": 132, "p95": 421 },
+    { "h": "02", "p50": 124, "p95": 380 },
+    { "h": "04", "p50": 118, "p95": 366 },
+    { "h": "06", "p50": 138, "p95": 412 },
+    { "h": "08", "p50": 148, "p95": 502 },
+    { "h": "10", "p50": 168, "p95": 612 },
+    { "h": "12", "p50": 182, "p95": 718 },
+    { "h": "14", "p50": 174, "p95": 642 },
+    { "h": "16", "p50": 156, "p95": 540 },
+    { "h": "18", "p50": 142, "p95": 480 },
+    { "h": "20", "p50": 138, "p95": 442 },
+    { "h": "22", "p50": 128, "p95": 398 }
+  ],
+  "topToolsByCalls": [
+    { "name": "kb.search", "calls": 4218 },
+    { "name": "billing.list_invoices", "calls": 1842 },
+    { "name": "tickets.list", "calls": 1402 },
+    { "name": "crm.get_customer", "calls": 1108 },
+    { "name": "tickets.get", "calls": 982 },
+    { "name": "billing.get_invoice", "calls": 718 },
+    { "name": "tickets.create", "calls": 421 },
+    { "name": "fleet.list_vehicles", "calls": 268 }
+  ],
+  "topErrors": [
+    { "signature": "openai · 429 rate-limit", "count": 18, "last": "2m ago" },
+    { "signature": "subscription.change_plan · 409 conflict", "count": 12, "last": "12m ago" },
+    { "signature": "kb.search · timeout 30s", "count": 7, "last": "1h ago" },
+    { "signature": "fleet.dispatch · 502 upstream", "count": 4, "last": "3h ago" },
+    { "signature": "billing.adjust_charge · validation failed", "count": 2, "last": "5h ago" }
+  ],
+  "costByPack": [
+    { "pack": "support-demo", "inputUsd": 4.82, "outputUsd": 7.18, "total": 12.0 },
+    { "pack": "research-demo", "inputUsd": 8.4, "outputUsd": 11.2, "total": 19.6 },
+    { "pack": "fleet-demo", "inputUsd": 0.62, "outputUsd": 1.04, "total": 1.66 },
+    { "pack": "starter", "inputUsd": 0.18, "outputUsd": 0.28, "total": 0.46 }
+  ],
+  "apiKeys": [
+    {
+      "id": "k_live_a1c2",
+      "name": "Local dev (laptop)",
+      "prefix": "agi_a1c2…",
+      "created": "2026-04-12",
+      "lastUsed": "2m ago",
+      "scopes": ["agi:dev"]
+    },
+    {
+      "id": "k_live_b8e1",
+      "name": "CI pipeline",
+      "prefix": "agi_b8e1…",
+      "created": "2026-03-04",
+      "lastUsed": "1h ago",
+      "scopes": ["agi:viewer"]
+    },
+    {
+      "id": "k_live_c9f3",
+      "name": "Promptfoo runner",
+      "prefix": "agi_c9f3…",
+      "created": "2026-02-19",
+      "lastUsed": "3d ago",
+      "scopes": ["agi:dev"]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "s1",
+      "device": "MacBook Pro · Chrome 124",
+      "location": "Berlin, DE",
+      "current": true,
+      "lastActive": "now"
+    },
+    {
+      "id": "s2",
+      "device": "iPhone 15 · Safari",
+      "location": "Berlin, DE",
+      "current": false,
+      "lastActive": "2h ago"
+    },
+    {
+      "id": "s3",
+      "device": "Ubuntu · Firefox",
+      "location": "Lisbon, PT",
+      "current": false,
+      "lastActive": "1d ago"
+    }
+  ]
+}

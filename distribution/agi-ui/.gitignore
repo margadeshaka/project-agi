@@ -1,0 +1,2 @@
+# Next.js / TypeScript build artifacts (not silenced by repo root .gitignore)
+*.tsbuildinfo

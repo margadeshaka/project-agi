@@ -1,43 +1,78 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * Sign-in page — Auth.js v5 server-action style.
- *
- * The form posts to a server action which calls `signIn("keycloak")`. v5
- * handles the OIDC code-flow redirect; the user lands back on `/` (or the
- * `callbackUrl` we hand it).
- *
- * Keeping this RSC means we don't ship the next-auth/react bundle to the
- * sign-in page itself.
- */
+'use client';
 
-import { signIn } from '@/auth';
+import { useRouter } from 'next/navigation';
+import { Icon } from '../../components/m3';
 
-export default function SignInPage() {
-  const issuer = process.env.AGI_OIDC_ISSUER ?? 'http://localhost:8081/realms/agi';
-
-  async function doSignIn() {
-    'use server';
-    await signIn('keycloak', { redirectTo: '/' });
-  }
-
+export default function SignInScreen() {
+  const router = useRouter();
   return (
-    <section className="mx-auto max-w-md space-y-6 py-12">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
-      <p className="text-sm text-muted">
-        project-agi delegates identity to your OIDC provider. Click below to
-        continue to your configured Keycloak realm.
-      </p>
-      <form action={doSignIn}>
+    <div className="signin-shell">
+      <div className="signin-card">
+        <div className="row" style={{ gap: 14, marginBottom: 24 }}>
+          <div className="rail-logo" style={{ width: 44, height: 44 }} />
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>project-agi</div>
+            <div className="mono muted" style={{ fontSize: 12 }}>
+              open-source · agent intelligence stack
+            </div>
+          </div>
+        </div>
+
+        <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 400 }}>Sign in</h2>
+        <p className="muted" style={{ margin: '0 0 26px', fontSize: 14 }}>
+          You&rsquo;ll be redirected to the configured OIDC issuer.
+        </p>
+
         <button
-          type="submit"
-          className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          type="button"
+          className="btn primary"
+          style={{ width: '100%', justifyContent: 'center', height: 48, fontSize: 14 }}
+          onClick={() => router.push('/')}
         >
-          Continue with Keycloak
+          Continue with OIDC
+          <Icon name="chev" size={16} />
         </button>
-      </form>
-      <div className="rounded-md border border-border bg-muted/10 p-3 text-xs text-muted">
-        Issuer: <code>{issuer}</code>
+
+        <div className="row" style={{ margin: '22px 0', gap: 12, fontSize: 11.5 }}>
+          <div style={{ height: 1, background: 'var(--md-outline-variant)', flex: 1 }} />
+          <span className="mono muted">OR</span>
+          <div style={{ height: 1, background: 'var(--md-outline-variant)', flex: 1 }} />
+        </div>
+
+        <div>
+          <label className="mono muted" style={{ fontSize: 11.5, display: 'block', marginBottom: 6 }}>
+            STATIC TOKEN · DEV ONLY
+          </label>
+          <input className="input" style={{ width: '100%' }} placeholder="agi_token_…" />
+        </div>
+        <button
+          type="button"
+          className="btn outlined"
+          style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
+          onClick={() => router.push('/')}
+        >
+          Use token
+        </button>
+
+        <div className="hr" style={{ margin: '22px 0' }} />
+        <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.85 }}>
+          <div>
+            <strong style={{ color: 'var(--md-on-surface)' }}>Issuer</strong> ·{' '}
+            <span className="mono">https://auth.example.org/realms/agi</span>
+          </div>
+          <div>
+            <strong style={{ color: 'var(--md-on-surface)' }}>Mode</strong> · oidc
+          </div>
+          <div>
+            <strong style={{ color: 'var(--md-on-surface)' }}>Env</strong> · production
+          </div>
+        </div>
+
+        <div className="muted" style={{ marginTop: 22, textAlign: 'center', fontSize: 12 }}>
+          Trouble signing in? <a href="#">Contact your platform admin</a>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }

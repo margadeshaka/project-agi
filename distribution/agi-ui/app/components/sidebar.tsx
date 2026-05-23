@@ -2,174 +2,112 @@
 'use client';
 
 /**
- * M3 navigation drawer.
+ * Sidebar — Material Design 3 navigation drawer.
  *
- * Per Material Design 3 spec: each item is a 44px full-pill row with a
- * state-layer background that lifts to `--md-secondary-container` when
- * active. The leading icon is purely affordance; the label carries
- * semantic weight.
- *
- * Role-aware filtering (FR-IA-01) — items the user lacks scope for are
- * HIDDEN, not greyed (ADMIN_CONSOLE §5). Server-side enforcement still
- * happens at the runtime; UI hiding is for clean affordance, never the
- * security boundary (FR-AUTH-02).
- *
- * Scope rules — see ADMIN_CONSOLE §5 RBAC matrix:
- *
- *   Item       | Visible to scopes (any one matches)
- *   -----------+------------------------------------------------------
- *   Health     | every signed-in user
- *   Packs      | agi:admin | agi:viewer | agi:operator:<any-slug>
- *   Tools      | agi:admin | agi:viewer
- *   Use cases  | agi:admin | agi:viewer | agi:dev | agi:operator:<any>
- *   Audit      | agi:admin | agi:viewer
- *   LLM        | agi:admin | agi:viewer
- *   Admin      | agi:admin only (sub-routes: Log, Users, Settings)
- *
- * The operator role intentionally has access to Packs + Use cases for
- * its own slug; the runtime authorises the per-pack data anyway, so a
- * stray click hits a 403 we render via ForbiddenState rather than
- * leaking content.
+ * - 272-px wide rail (matches `.app` grid in globals.css).
+ * - Each item is a 56-px full-pill row with state-layer hover; active rows lift to
+ *   `--md-secondary-container` and switch icons to FILL=1.
+ * - Items the user lacks scope for are hidden (FR-IA-01), never greyed.
  */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useScopes } from './auth-provider';
-import { cn } from '@/lib/utils';
+import { Icon } from './m3';
+import { DATA } from '../mock/data';
 
 interface NavItem {
   href: string;
   label: string;
-  /** Leading icon glyph (single character — emoji- or geometric-style). */
-  icon?: string;
-  /** Scopes required (any one matches). Empty/undefined = visible to all signed-in users. */
+  icon: string;
+  badge?: number;
   scopes?: string[];
-  /** When set, any `agi:operator:<slug>` scope also grants visibility. */
-  allowOperator?: boolean;
+  needsOperator?: boolean;
 }
 
-const NAV: NavItem[] = [
-  { href: '/', label: 'Health', icon: '◉' /* visible to all signed-in users */ },
+const PLATFORM: NavItem[] = [
+  { href: '/', label: 'Health', icon: 'health' },
+  { href: '/metrics', label: 'Metrics', icon: 'spark', scopes: ['agi:admin', 'agi:dev'] },
   {
     href: '/packs',
     label: 'Packs',
-    icon: '▦',
-    scopes: ['agi:admin', 'agi:viewer'],
-    allowOperator: true,
+    icon: 'pack',
+    badge: 4,
+    scopes: ['agi:admin'],
+    needsOperator: true,
   },
-  { href: '/tools', label: 'Tools', icon: '◇', scopes: ['agi:admin', 'agi:viewer'] },
-  {
-    href: '/use-cases',
-    label: 'Use cases',
-    icon: '◍',
-    scopes: ['agi:admin', 'agi:viewer', 'agi:dev'],
-    allowOperator: true,
-  },
-  { href: '/audit', label: 'Audit', icon: '≣', scopes: ['agi:admin', 'agi:viewer'] },
-  { href: '/llm', label: 'LLM', icon: '◐', scopes: ['agi:admin', 'agi:viewer'] },
+  { href: '/tools', label: 'Tools', icon: 'tool', badge: 15, scopes: ['agi:admin', 'agi:dev'] },
+  { href: '/use-cases', label: 'Use cases', icon: 'usecase', scopes: ['agi:admin'] },
+  { href: '/audit', label: 'AI-Trail', icon: 'audit' },
+  { href: '/jobs', label: 'Jobs', icon: 'cpu', scopes: ['agi:admin'] },
+  { href: '/llm', label: 'LLM', icon: 'llm', scopes: ['agi:admin'] },
 ];
 
-const ADMIN_SUB: NavItem[] = [
-  { href: '/admin/log', label: 'Log', icon: '☰', scopes: ['agi:admin'] },
-  { href: '/admin/users', label: 'Users', icon: '◯', scopes: ['agi:admin'] },
-  { href: '/admin/settings', label: 'Settings', icon: '⚙', scopes: ['agi:admin'] },
+const ADMIN: NavItem[] = [
+  { href: '/admin/users', label: 'Users', icon: 'user', scopes: ['agi:admin'] },
+  { href: '/admin/log', label: 'Admin log', icon: 'log' },
+  { href: '/admin/settings', label: 'Settings', icon: 'settings', scopes: ['agi:admin'] },
 ];
 
-/** Returns true if the user's scope set should see this nav item. */
-export function isVisible(item: NavItem, scopes: readonly string[]): boolean {
-  if (!item.scopes || item.scopes.length === 0) {
-    // Items without an explicit scope list are visible to every signed-in user.
-    if (!item.allowOperator) return true;
-  }
-  if (item.scopes?.some((s) => scopes.includes(s))) return true;
-  if (item.allowOperator && scopes.some((s) => s.startsWith('agi:operator:'))) return true;
+function visibleFor(item: NavItem, scopes: string[]): boolean {
+  if (!item.scopes) return true;
+  if (item.scopes.some((s) => scopes.includes(s))) return true;
+  if (item.needsOperator && scopes.some((s) => s.startsWith('agi:operator:'))) return true;
   return false;
-}
-
-/** Active when the current path matches the item exactly, or is a sub-route. */
-function isActiveFor(href: string, pathname: string): boolean {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function Sidebar() {
   const pathname = usePathname() ?? '/';
-  const scopes = useScopes();
+  const user = DATA.user.admin;
+  const scopes = user.scopes;
   const showAdmin = scopes.includes('agi:admin');
 
   const renderItem = (item: NavItem) => {
-    const active = isActiveFor(item.href, pathname);
+    const isActive =
+      pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
     return (
       <Link
         key={item.href}
         href={item.href}
-        aria-current={active ? 'page' : undefined}
-        data-testid={`nav-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-        className={cn(
-          'group flex h-11 items-center gap-3 rounded-full px-4 text-[13.5px] font-medium tracking-wide transition-colors',
-          active
-            ? 'bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]'
-            : 'text-[var(--md-on-surface-variant)] hover:bg-[var(--md-on-surface)]/8 hover:text-[var(--md-on-surface)]',
-        )}
+        className={`rail-item ${isActive ? 'active' : ''}`.trim()}
+        aria-current={isActive ? 'page' : undefined}
       >
-        {item.icon && (
-          <span aria-hidden className="text-base leading-none">
-            {item.icon}
-          </span>
-        )}
-        <span>{item.label}</span>
+        <Icon name={item.icon} />
+        {item.label}
+        {item.badge != null && <span className="badge">{item.badge}</span>}
       </Link>
     );
   };
 
-  const visibleTop = NAV.filter((n) => isVisible(n, scopes));
-  const visibleAdmin = showAdmin ? ADMIN_SUB.filter((n) => isVisible(n, scopes)) : [];
-
   return (
-    <nav
-      aria-label="Primary"
-      className="flex w-64 shrink-0 flex-col gap-0.5 overflow-y-auto p-3"
-      style={{ background: 'var(--md-surface-container-low)' }}
-    >
-      <div className="flex items-center gap-3 px-2 pb-3 pt-4">
-        <span
-          aria-hidden
-          className="grid h-9 w-9 place-items-center rounded-xl"
-          style={{
-            background:
-              'radial-gradient(circle at 32% 30%, var(--md-tertiary), transparent 55%), linear-gradient(135deg, var(--md-primary), var(--md-primary-container))',
-            color: 'var(--md-on-primary)',
-          }}
-        >
-          <span
-            className="h-3.5 w-3.5 rounded-full"
-            style={{ background: 'var(--md-on-primary)', opacity: 0.92 }}
-          />
-        </span>
-        <span className="flex flex-col leading-tight">
-          <span className="text-[15px] font-medium tracking-tight">project-agi</span>
-          <span
-            className="font-mono text-[11.5px]"
-            style={{ color: 'var(--md-on-surface-variant)' }}
-          >
-            admin console
-          </span>
-        </span>
-      </div>
-
-      {visibleTop.map(renderItem)}
-
-      {showAdmin && visibleAdmin.length > 0 && (
-        <>
-          <div
-            className="mb-1.5 mt-5 px-4 text-[11px] font-medium tracking-wide"
-            style={{ color: 'var(--md-on-surface-variant)' }}
-          >
-            Admin
+    <aside className="rail">
+      <div className="rail-brand">
+        <div className="rail-logo" />
+        <div>
+          <div className="rail-title">project-agi</div>
+          <div className="rail-subtitle">
+            {DATA.env.deploy} · {DATA.env.version}
           </div>
-          {visibleAdmin.map(renderItem)}
-        </>
-      )}
-    </nav>
+        </div>
+      </div>
+      <nav className="rail-nav" aria-label="Primary">
+        <div className="rail-env">Platform</div>
+        {PLATFORM.filter((n) => visibleFor(n, scopes)).map(renderItem)}
+        {showAdmin && (
+          <>
+            <div className="rail-env" style={{ marginTop: 14 }}>
+              Admin
+            </div>
+            {ADMIN.filter((n) => visibleFor(n, scopes)).map(renderItem)}
+          </>
+        )}
+      </nav>
+      <div className="rail-footer">
+        <div className="avatar">{user.initials}</div>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <div className="who">{user.id}</div>
+          <div className="role">{user.persona}</div>
+        </div>
+      </div>
+    </aside>
   );
 }

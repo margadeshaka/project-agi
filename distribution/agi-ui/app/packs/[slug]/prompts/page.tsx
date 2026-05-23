@@ -1,84 +1,79 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * /packs/:slug/prompts — read-only syntax-highlighted prompts viewer
- * (FR-PACK-03). NO form controls. The data source is the pack filesystem;
- * the runtime exposes prompts via GET /admin/packs/:slug/prompts and there
- * is NO POST / PATCH counterpart.
- */
+'use client';
 
-import { runtimeFetch, RuntimeError } from '../../../components/runtime-fetch';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
-import { CodeBlock } from '../../../components/ui/code-block';
-import { EmptyState, ErrorState, ForbiddenState } from '../../../components/ui/empty-state';
+import { useParams } from 'next/navigation';
+import { useState } from 'react';
+import { Card, Icon, Pill } from '../../../components/m3';
+import { DATA } from '../../../mock/data';
 
-interface PageProps {
-  params: { slug: string };
-}
-
-interface PromptDoc {
-  name: string;
-  path: string;
-  body: string;
-  language?: 'md' | 'plain';
-}
-
-async function loadPrompts(slug: string): Promise<{ docs: PromptDoc[] | null; error: RuntimeError | null }> {
-  try {
-    const docs = await runtimeFetch<PromptDoc[]>(`/admin/packs/${encodeURIComponent(slug)}/prompts`, {
-      pack: slug,
-    });
-    return { docs, error: null };
-  } catch (err) {
-    if (err instanceof RuntimeError) return { docs: null, error: err };
-    throw err;
-  }
-}
-
-export default async function PromptsPage({ params }: PageProps) {
-  const { docs, error } = await loadPrompts(params.slug);
-
-  if (error?.status === 403) return <ForbiddenState />;
-  if (error) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">{params.slug} · prompts</h1>
-        <ErrorState problem={error.problem} />
-      </section>
-    );
-  }
-  if (!docs || docs.length === 0) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">{params.slug} · prompts</h1>
-        <EmptyState
-          title="No prompts in this pack"
-          description="Prompts live under packs/{slug}/prompts/. Add files there and reload the pack."
-        />
-      </section>
-    );
-  }
+export default function PackPromptsScreen() {
+  const params = useParams<{ slug: string }>();
+  const slug = params?.slug;
+  const promptList = (slug ? DATA.prompts[slug] : undefined) ?? DATA.prompts['support-demo'] ?? [];
+  const [active, setActive] = useState(promptList[0]);
+  if (!active) return null;
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">{params.slug} · prompts</h1>
-        <p className="text-xs text-muted">
-          Read-only. Edit prompts in the pack repo; the runtime has no mutation endpoint by design (EX-01).
-        </p>
-      </header>
-      <div className="space-y-3">
-        {docs.map((doc) => (
-          <Card key={doc.path}>
-            <CardHeader>
-              <CardTitle>{doc.name}</CardTitle>
-              <p className="font-mono text-xs text-muted">{doc.path}</p>
-            </CardHeader>
-            <CardContent>
-              <CodeBlock language={doc.language ?? 'md'}>{doc.body}</CodeBlock>
-            </CardContent>
-          </Card>
+    <div className="grid-side">
+      <Card
+        title={active.name}
+        right={
+          <>
+            <Pill>read-only</Pill> &nbsp;
+            <span className="mono dim">
+              {active.sha} · {active.updated}
+            </span>
+          </>
+        }
+      >
+        <div
+          className="row"
+          style={{
+            marginBottom: 10,
+            gap: 10,
+            color: 'var(--md-on-surface-variant)',
+            fontSize: 11.5,
+          }}
+        >
+          <Icon name="info" size={13} />
+          Prompts are baked into containers at build time. Edit in{' '}
+          <span className="mono">packs/{slug}/prompts/</span> and ship a hotfix branch.
+        </div>
+        <pre className="code" style={{ maxHeight: 480 }}>
+          {active.body}
+        </pre>
+      </Card>
+
+      <Card title="Prompt files">
+        {promptList.map((pr) => (
+          <button
+            key={pr.name}
+            type="button"
+            className="rail-item"
+            style={{ marginBottom: 2 }}
+            onClick={() => setActive(pr)}
+          >
+            <Icon name="folder" size={14} />
+            <div style={{ flex: 1, textAlign: 'left', overflow: 'hidden' }}>
+              <div
+                className="mono"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--md-on-surface)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {pr.name}
+              </div>
+              <div className="mono dim" style={{ fontSize: 10.5 }}>
+                {pr.lines} lines · {pr.sha}
+              </div>
+            </div>
+          </button>
         ))}
-      </div>
-    </section>
+      </Card>
+    </div>
   );
 }

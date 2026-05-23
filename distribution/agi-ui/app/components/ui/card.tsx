@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  *   - outlined         → bare surface + outline-variant border (for screens
  *                        that need a hairline divide rather than a tonal lift)
  */
-type Variant = 'filled' | 'elevated' | 'outlined';
+type Variant = 'filled' | 'elevated' | 'outlined' | 'primary' | 'secondary';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: Variant;
@@ -22,6 +22,10 @@ const variantStyle: Record<Variant, string> = {
   filled: 'bg-[var(--md-surface-container-low)]',
   elevated: 'bg-[var(--md-surface-container)] shadow-[var(--md-elev-1)]',
   outlined: 'bg-[var(--md-surface)] border border-[var(--md-outline-variant)]',
+  primary:
+    'bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]',
+  secondary:
+    'bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]',
 };
 
 export function Card({ className, variant = 'filled', ...props }: CardProps) {

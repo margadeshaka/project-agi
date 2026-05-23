@@ -1,82 +1,109 @@
 // SPDX-License-Identifier: Apache-2.0
-/**
- * /admin/settings — operator-level read-only configuration (FR-ADM-03).
- */
+'use client';
 
-import { runtimeFetch, RuntimeError } from '../../components/runtime-fetch';
-import type { AdminSettings } from '@/lib/api/types';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { ErrorState, ForbiddenState } from '../../components/ui/empty-state';
+import { Card, Icon, Pill, ScreenHead } from '../../components/m3';
+import { DATA } from '../../mock/data';
 
-async function loadSettings(): Promise<{ settings: AdminSettings | null; error: RuntimeError | null }> {
-  try {
-    const settings = await runtimeFetch<AdminSettings>('/admin/settings');
-    return { settings, error: null };
-  } catch (err) {
-    if (err instanceof RuntimeError) return { settings: null, error: err };
-    throw err;
-  }
-}
-
-export default async function SettingsPage() {
-  const { settings, error } = await loadSettings();
-  if (error?.status === 403) return <ForbiddenState />;
-  if (error || !settings) {
-    return (
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <ErrorState problem={error?.problem ?? { title: 'Could not load settings' }} />
-      </section>
-    );
-  }
-
+export default function AdminSettingsScreen() {
+  const s = DATA.settings;
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-xs text-muted">
-          Read-only. Edit <code>operator.yaml</code> and restart the runtime to change.
-        </p>
-      </header>
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Identity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
-              <dt className="text-muted">OIDC issuer</dt>
-              <dd className="font-mono">{settings.oidc_issuer}</dd>
-              <dt className="text-muted">Env</dt>
-              <dd className="font-mono">{settings.env}</dd>
-            </dl>
-          </CardContent>
+    <div className="stack">
+      <ScreenHead
+        title="Operator settings"
+        lede="Operator-level configuration. All values come from operator.yaml at boot. The console renders them read-only; edits are PR-driven."
+        meta="source: /etc/agi/operator.yaml · checksum sha256:c4f1…"
+        right={
+          <a className="btn" href="#">
+            <Icon name="external" size={13} /> Open operator.yaml in repo
+          </a>
+        }
+      />
+
+      <div className="grid-side">
+        <Card title="Resolved configuration" right={<span className="mono dim">read-only</span>}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Value</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(s).map(([k, v]) => (
+                <tr key={k}>
+                  <td>
+                    <span className="mono" style={{ color: 'var(--md-primary)' }}>
+                      {k}
+                    </span>
+                  </td>
+                  <td className="mono">{v}</td>
+                  <td className="mono dim" style={{ fontSize: 11 }}>
+                    operator.yaml § {k.split('_')[1]?.toLowerCase() ?? 'core'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Observability</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
-              <dt className="text-muted">Langfuse</dt>
-              <dd className="font-mono">{settings.langfuse_url ?? '—'}</dd>
-              <dt className="text-muted">Telemetry sampling</dt>
-              <dd className="font-mono">{settings.telemetry_sampling}</dd>
-            </dl>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Vector store</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
-              <dt className="text-muted">URL</dt>
-              <dd className="font-mono">{settings.vector_store_url ?? '—'}</dd>
-            </dl>
-          </CardContent>
-        </Card>
+
+        <div className="stack">
+          <Card title="Auth mode" tight>
+            <div className="stack" style={{ gap: 8, fontSize: 12.5 }}>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>MODE</span>
+                <Pill kind="good">{s.AGI_AUTH_MODE}</Pill>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>ENV</span>
+                <Pill kind="info">{s.AGI_ENV}</Pill>
+              </div>
+              <div className="hr" />
+              <div className="dim" style={{ fontSize: 11.5 }}>
+                <Icon name="info" size={12} /> dev-noop mode is refused when AGI_ENV=production.
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Health pings" tight>
+            <div className="stack" style={{ gap: 6, fontSize: 12.5 }}>
+              <div className="row between">
+                <span>Runtime</span>
+                <Pill kind="good">12ms</Pill>
+              </div>
+              <div className="row between">
+                <span>Qdrant</span>
+                <Pill kind="good">8ms</Pill>
+              </div>
+              <div className="row between">
+                <span>OIDC issuer</span>
+                <Pill kind="good">22ms</Pill>
+              </div>
+              <div className="row between">
+                <span>Langfuse</span>
+                <Pill kind="good">31ms</Pill>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Telemetry" tight>
+            <div className="stack" style={{ gap: 6, fontSize: 12.5 }}>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>SAMPLING</span>
+                <span className="mono">10%</span>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>EXPORTER</span>
+                <span className="mono">otlp/grpc</span>
+              </div>
+              <div className="row between">
+                <span className="dim mono" style={{ fontSize: 11 }}>RETENTION</span>
+                <span className="mono">30d</span>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
