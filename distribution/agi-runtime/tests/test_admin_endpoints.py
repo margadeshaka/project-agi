@@ -1,0 +1,400 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 project-agi contributors
+# See LICENSE in the repo root for full terms.
+"""Admin console GET endpoints — packs list/detail, users, settings, llm providers.
+
+These are the read-only endpoints consumed by the agi-ui shell (Console
+FR-PACK, FR-AUTH, FR-ADM, FR-LLM). All five require ``X-Pack`` + a valid
+bearer to clear the dispatch middleware; scope gating is per-endpoint.
+
+The fixture pattern mirrors ``test_chat_end_to_end.py``: patch the claims
+verifier with a bearer-token fake, then seed ``app.state.runtime`` with
+in-memory packs, model bindings, and trail events.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Iterator
+
+import pytest
+from fastapi.testclient import TestClient
+
+from agi.config import Pack
+from agi.trail import MemoryTrailSink, new_event
+from agi_runtime.config import ModelBindingConfig
+from agi_runtime.main import create_app
+from agi_runtime.middleware import dispatch as dispatch_mod
+from agi_runtime.state import RuntimeState
+
+
+def _bearer(tenant: str, *scopes: str) -> str:
+    if scopes:
+        return f"Bearer tenant:{tenant}:{','.join(scopes)}"
+    return f"Bearer tenant:{tenant}"
+
+
+def _hdr(tenant: str, *scopes: str) -> dict[str, str]:
+    return {"X-Pack": tenant, "Authorization": _bearer(tenant, *scopes)}
+
+
+def _seed_pack(
+    state: RuntimeState,
+    slug: str,
+    *,
+    version: str = "1.0.0",
+    name: str | None = None,
+    declared_roles: list[str] | None = None,
+    tool_allowlist: list[str] | None = None,
+    metadata: dict | None = None,
+    kb_dir: Path | None = None,
+) -> None:
+    """Inject a fully-formed :class:`Pack` into the loader cache."""
+    pack = Pack(
+        slug=slug,
+        version=version,
+        name=name or slug.title(),
+        declared_model_roles=declared_roles or ["reasoning", "fast"],
+        tool_allowlist=tool_allowlist or [],
+        prompts_dir=None,
+        kb_dir=kb_dir,
+        metadata=metadata or {},
+    )
+    state.pack_loader._cache[slug] = pack  # noqa: SLF001 — direct seed
+    state.pack_loader._shas[slug] = f"sha-{slug}"  # noqa: SLF001
+
+
+@pytest.fixture
+def configured(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """TestClient with bearer-token-driven claims and pre-seeded packs."""
+
+    async def fake_verify(request):  # type: ignore[no-untyped-def]
+        header = request.headers.get("Authorization", "")
+        if not header.lower().startswith("bearer "):
+            raise dispatch_mod._AuthError(401, "missing_bearer", "no bearer")
+        token = header.split(" ", 1)[1].strip()
+        if not token.startswith("tenant:"):
+            raise dispatch_mod._AuthError(401, "bad_token", "fake token")
+        body = token.split(":", 1)[1]
+        if ":" in body:
+            tenant, scopes_raw = body.split(":", 1)
+            scopes = tuple(s for s in scopes_raw.split(",") if s)
+        else:
+            tenant, scopes = body, ()
+        return dispatch_mod._Claims(sub=f"user-{tenant}", tenant_id=tenant, scopes=scopes)
+
+    monkeypatch.setattr(dispatch_mod, "_verify_request_claims", fake_verify)
+    # Keep AGI_ENV in a known state so the LLM-providers endpoint stays hermetic.
+    monkeypatch.setenv("AGI_ENV", "test")
+
+    app = create_app()
+    with TestClient(app) as c:
+        state: RuntimeState = app.state.runtime
+        # Ensure a clean memory sink so activity counts are deterministic.
+        state.trail_sink = MemoryTrailSink()
+        _seed_pack(
+            state,
+            "telco-demo",
+            version="2.0.0",
+            name="Telco Demo",
+            declared_roles=["reasoning", "fast", "extractor"],
+            tool_allowlist=["billing.adjust_charge", "billing.list_invoices"],
+            metadata={
+                "vertical": "telco",
+                "theme": {
+                    "primary": "#0066CC",
+                    "secondary": "#003366",
+                    "accent": "#FF9900",
+                    "mode": "light",
+                },
+                "scenarios": ["deflect", "resolve"],
+                "system_prompt": "You are a telco assistant.",
+            },
+        )
+        _seed_pack(
+            state,
+            "fleet-demo",
+            version="1.0.0",
+            name="Fleet Demo",
+            declared_roles=["reasoning"],
+            tool_allowlist=["fleet.list_vehicles"],
+            metadata={"vertical": "logistics"},
+        )
+        # Seed model bindings so /admin/llm/providers has something to group.
+        state.config.models["reasoning"] = ModelBindingConfig(
+            role="reasoning", model_id="openai/gpt-4o"
+        )
+        state.config.models["fast"] = ModelBindingConfig(role="fast", model_id="ollama/llama3.2")
+        yield c
+
+
+# ---------------------------------------------------------------------------
+# /admin/packs
+# ---------------------------------------------------------------------------
+
+
+def test_packs_list_returns_loaded_packs(configured: TestClient) -> None:
+    # admin sees both
+    resp = configured.get("/admin/packs", headers=_hdr("telco-demo", "agi:admin"))
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    slugs = {p["slug"] for p in body["packs"]}
+    assert slugs == {"telco-demo", "fleet-demo"}
+    assert body["count"] == 2
+    # Shape contract
+    sample = next(p for p in body["packs"] if p["slug"] == "telco-demo")
+    for key in (
+        "slug",
+        "name",
+        "display_name",
+        "version",
+        "vertical",
+        "theme",
+        "updated_at",
+    ):
+        assert key in sample
+    assert sample["theme"]["primary"] == "#0066CC"
+    assert sample["vertical"] == "telco"
+
+
+def test_packs_list_operator_403(configured: TestClient) -> None:
+    """Operators don't enumerate peer packs — /admin/whoami carries their slug."""
+    resp = configured.get(
+        "/admin/packs",
+        headers=_hdr("telco-demo", "agi:operator:telco-demo"),
+    )
+    assert resp.status_code == 403
+
+
+def test_packs_list_no_scope_403(configured: TestClient) -> None:
+    resp = configured.get("/admin/packs", headers=_hdr("telco-demo"))
+    assert resp.status_code == 403
+
+
+def test_packs_list_viewer_403(configured: TestClient) -> None:
+    """Viewers don't enumerate the pack catalogue at the platform level."""
+    resp = configured.get(
+        "/admin/packs",
+        headers=_hdr("telco-demo", "agi:viewer"),
+    )
+    assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# /admin/packs/{slug}
+# ---------------------------------------------------------------------------
+
+
+def test_packs_detail_404_unknown_slug(configured: TestClient) -> None:
+    resp = configured.get(
+        "/admin/packs/ghost",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 404
+
+
+def test_packs_detail_returns_role_bindings_and_allowed_tools(
+    configured: TestClient,
+) -> None:
+    resp = configured.get(
+        "/admin/packs/telco-demo",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # Required keys from the contract.
+    for key in (
+        "slug",
+        "name",
+        "version",
+        "metadata",
+        "models",
+        "theme",
+        "role_bindings",
+        "allowed_tools",
+        "kb",
+        "scenarios",
+        "activity_24h",
+    ):
+        assert key in body, f"missing key {key}"
+    assert body["slug"] == "telco-demo"
+    assert "billing.adjust_charge" in body["allowed_tools"]
+    assert body["role_bindings"]["system_prompt"] == "You are a telco assistant."
+    assert "reasoning" in body["models"]
+    assert body["scenarios"] == ["deflect", "resolve"]
+    assert body["activity_24h"] == {"chats": 0, "tool_calls": 0, "errors": 0}
+
+
+def test_packs_detail_operator_blocked_on_other_pack(configured: TestClient) -> None:
+    # operator for fleet-demo can't read telco-demo's detail. Their X-Pack
+    # has to match their own claim, so we hit the endpoint via fleet-demo
+    # and request the telco-demo slug in-path.
+    resp = configured.get(
+        "/admin/packs/telco-demo",
+        headers=_hdr("fleet-demo", "agi:operator:fleet-demo"),
+    )
+    assert resp.status_code == 403
+
+
+def test_packs_detail_counts_recent_activity(configured: TestClient) -> None:
+    """Memory sink events for the slug feed activity_24h."""
+    import asyncio
+
+    sink = configured.app.state.runtime.trail_sink
+
+    async def seed() -> None:
+        await sink.write(
+            new_event(
+                correlation_id="c1",
+                pack_slug="telco-demo",
+                session_id="s",
+                event_type="llm.call",
+                payload={},
+            )
+        )
+        await sink.write(
+            new_event(
+                correlation_id="c2",
+                pack_slug="telco-demo",
+                session_id="s",
+                event_type="mcp.tool",
+                payload={},
+            )
+        )
+        await sink.write(
+            new_event(
+                correlation_id="c3",
+                pack_slug="telco-demo",
+                session_id="s",
+                event_type="error",
+                payload={},
+            )
+        )
+
+    asyncio.run(seed())
+    resp = configured.get(
+        "/admin/packs/telco-demo",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["activity_24h"] == {"chats": 1, "tool_calls": 1, "errors": 1}
+
+
+# ---------------------------------------------------------------------------
+# /admin/users
+# ---------------------------------------------------------------------------
+
+
+def test_users_admin_only(configured: TestClient) -> None:
+    # viewer → 403
+    resp = configured.get(
+        "/admin/users",
+        headers=_hdr("telco-demo", "agi:viewer"),
+    )
+    assert resp.status_code == 403
+    # operator → 403
+    resp = configured.get(
+        "/admin/users",
+        headers=_hdr("telco-demo", "agi:operator:telco-demo"),
+    )
+    assert resp.status_code == 403
+    # admin → 200
+    resp = configured.get(
+        "/admin/users",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200
+
+
+def test_users_returns_synthetic_user_dev_noop(configured: TestClient) -> None:
+    resp = configured.get(
+        "/admin/users",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["count"] == 1
+    assert body["source"] == "synthetic-from-bearer"
+    user = body["users"][0]
+    assert user["subject"] == "user-telco-demo"
+    assert "agi:admin" in user["scopes"]
+    assert user["tenant_id"] == "telco-demo"
+
+
+# ---------------------------------------------------------------------------
+# /admin/settings
+# ---------------------------------------------------------------------------
+
+
+def test_settings_admin_only(configured: TestClient) -> None:
+    resp = configured.get(
+        "/admin/settings",
+        headers=_hdr("telco-demo", "agi:viewer"),
+    )
+    assert resp.status_code == 403
+    resp = configured.get(
+        "/admin/settings",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200
+
+
+def test_settings_includes_version_and_env(configured: TestClient) -> None:
+    resp = configured.get(
+        "/admin/settings",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200, resp.text
+    settings = resp.json()["settings"]
+    for key in (
+        "version",
+        "env",
+        "auth_mode",
+        "otel_endpoint",
+        "langfuse_url",
+        "trail_sink_type",
+        "trail_sink_path",
+        "hardening_mode",
+        "hot_reload_enabled",
+    ):
+        assert key in settings, f"missing key {key}"
+    assert settings["env"] == "test"
+    assert settings["trail_sink_type"] == "memory"
+    assert settings["trail_sink_path"] is None
+    assert settings["hardening_mode"] is False
+    assert isinstance(settings["version"], str) and settings["version"]
+
+
+# ---------------------------------------------------------------------------
+# /admin/llm/providers
+# ---------------------------------------------------------------------------
+
+
+def test_llm_providers_returns_ready_in_test_env(configured: TestClient) -> None:
+    resp = configured.get(
+        "/admin/llm/providers",
+        headers=_hdr("telco-demo", "agi:admin"),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["probed"] is False
+    kinds = {p["kind"] for p in body["providers"]}
+    assert "openai" in kinds
+    assert "ollama" in kinds
+    for p in body["providers"]:
+        assert p["status"] == "ready"
+        assert p["last_checked_at"]
+        assert isinstance(p["configured_models"], list) and p["configured_models"]
+        assert isinstance(p["primary_for_roles"], list) and p["primary_for_roles"]
+    # viewer also allowed
+    resp = configured.get(
+        "/admin/llm/providers",
+        headers=_hdr("telco-demo", "agi:viewer"),
+    )
+    assert resp.status_code == 200
+    # bare caller → 403
+    resp = configured.get(
+        "/admin/llm/providers",
+        headers=_hdr("telco-demo"),
+    )
+    assert resp.status_code == 403
