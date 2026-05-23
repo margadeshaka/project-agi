@@ -74,14 +74,14 @@ permissions:
 
 jobs:
   build-and-publish:
-    name: ${{ matrix.package }} → ${{ github.event_name == 'workflow_dispatch' && inputs.repository || 'pypi' }}
+    name: ${{ matrix.package }} → ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.repository || 'pypi' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Skip packages the maintainer didn't pick when dispatching by hand.
-    if: |
-      github.event_name != 'workflow_dispatch' ||
-      inputs.package == 'all' ||
-      inputs.package == matrix.package
+    if: >-
+      github.event_name == 'push' ||
+      github.event.inputs.package == 'all' ||
+      github.event.inputs.package == matrix.package
     strategy:
       fail-fast: false
       matrix:
@@ -123,7 +123,7 @@ jobs:
           retention-days: 14
 
       - name: Publish to TestPyPI
-        if: github.event_name == 'workflow_dispatch' && inputs.repository == 'testpypi'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.repository == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: ${{ matrix.path }}/dist
@@ -136,7 +136,7 @@ jobs:
         # the maintainer explicitly chose it.
         if: |
           github.event_name == 'push' ||
-          (github.event_name == 'workflow_dispatch' && inputs.repository == 'pypi')
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.repository == 'pypi')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: ${{ matrix.path }}/dist
